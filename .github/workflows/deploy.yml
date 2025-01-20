@@ -3,9 +3,9 @@ name: Deploy locally
 on:
   push:
     branches:
-      - main         # 每次推送到 main 分支時觸發
-      - 'feature/*'  # 每次開發新功能到 feature 分支時觸發
-      - 'bugfix/*'   # 每次修復bug到bugfix分支時觸發
+      - main
+      - 'cpca/*' 
+      - 'cpcb/*'
 
 jobs:
   deploy:
