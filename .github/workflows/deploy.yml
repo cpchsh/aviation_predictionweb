@@ -20,7 +20,7 @@ jobs:
     - name: Build Docker Image
       run: |
         cd ~/1_aviation_predictionweb &&
-        docker build -t python312:latest .
+        docker build -t python312:v1.0.01 .
 
     # 3. 停止或移除舊容器
     - name: Stop & Remove Old Container
