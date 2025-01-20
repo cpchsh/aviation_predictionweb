@@ -32,4 +32,4 @@ jobs:
     # 4. 執行新容器
     - name: Run Container
       run: |
-        docker run -d -p 5001:5000 --name python312_container python312:latest
+        docker run -d -p 5001:5000 --name python312_container python312:v1.0.01
