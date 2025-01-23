@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Tukey 自訂輸入{% endblock %}
+
+{% block content %}
+<div class="container">
+    <form action="/tukey_predict_noDate" method="POST" class="card p-4" style="border: none;" id="submitForm"> 
+        <fieldset>
+            <legend style="font-weight: bold;">Tukey 自訂輸入(不含日期)</legend>
+           
+            <div class="mb-3">
+                <label for="japan" class="form-label">日本:</label>
+                <input type="number" id="japan" name="japan" class="form-control" value="567" step="any" min="1">
+            </div>
+            <div class="mb-3">
+                <label for="korea" class="form-label">南韓:</label>
+                <input type="number" id="korea" name="korea" class="form-control" value="587" step="any" min="1">
+            </div>
+            <div class="mb-3">
+                <label for="hongkong" class="form-label">香港:</label>
+                <input type="number" id="hongkong" name="hongkong" class="form-control" value="586" step="any" min="1">
+            </div>
+            <div class="mb-3">
+                <label for="singapore" class="form-label">新加坡:</label>
+                <input type="number" id="singapore" name="singapore" class="form-control" value="545" step="any" min="1">
+            </div>
+            <div class="mb-3">
+                <label for="shanghai" class="form-label">上海:</label>
+                <input type="number" id="shanghai" name="shanghai" class="form-control" value="570" step="any" min="1">
+            </div>
+            <div class="mb-3">
+                <label for="zhoushan" class="form-label">舟山:</label>
+                <input type="number" id="zhoushan" name="zhoushan" class="form-control" value="570" step="any" min="1">
+            </div>
+            <div class="text-center">
+                <button type="submit" class="btn btn-lg" >送出</button>
+            </div>
+        </fieldset>
+    </form>
+
+</div>
+
+{% endblock %}
