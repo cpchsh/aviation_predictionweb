@@ -1,4 +1,24 @@
 /* styles.css */
+.header-container {
+    display: flex;
+    align-items: center; /* 垂直置中 */
+    justify-content: space-between; /* 左右分布 */
+    background-color: rgb(0, 129, 189); /* 背景顏色 */
+    color: white; /* 文字顏色 */
+    padding: 10px 20px; /* 內距 */
+}
+
+.header-title {
+    flex-grow: 1; /* 讓標題能自動填充空間 */
+    text-align: center; /* 標題置中 */
+    margin: 0; /* 移除默認外距 */
+}
+.home-icon {
+    color: white; /* 圖示顏色 */
+    font-size: 1.5rem; /* 圖示大小 */
+    text-decoration: none; /* 移除下劃線 */
+}
+
 
 body {
     font-family: Arial, sans-serif;
@@ -9,30 +29,21 @@ body {
     color: #333;
 }
 
-header {
-    background: #007bff;
-    color: white;
-    padding: 20px 0;
-    text-align: center;
-}
-
 h1, h2 {
-    color: #007bff;
-    text-align: center;
+    color: #ffffff;
+    font-weight: bold;
+    
 }
 
-h1 {
-    margin-bottom: 10px;
-}
 
 p {
-    text-align: center;
     margin: 10px 0;
+    color: #007eaf;
 }
 
 .container {
     width: 90%;
-    max-width: 800px;
+    /* max-width: 800px; */
     margin: 20px auto;
     background: white;
     padding: 20px;
@@ -41,37 +52,23 @@ p {
 }
 
 a {
-    color: #007bff;
+    color: #007eaf;
     text-decoration: none;
     font-weight: bold;
 }
 
-a:hover {
-    text-decoration: underline;
+
+.btn {
+    color: #fff;
+    background-color: #007eaf;
+    border-color: #007eaf;
+}
+.btn:hover {
+    color: #000;
+            background-color: rgb(230, 228, 228);
+            border-color: rgb(75, 75, 73);
 }
 
-.button {
-    display: block;
-    width: 200px;
-    margin: 20px auto;
-    background: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    font-size: 16px;
-    border-radius: 5px;
-    cursor: pointer;
-    text-align: center;
-}
-
-.button:hover {
-    background: #0056b3;
-}
-
-.button:disabled {
-    background: #cccccc;
-    cursor: not-allowed;
-}
 
 #loading {
     display: none;
@@ -106,7 +103,7 @@ a:hover {
     }
 }
 
-table {
+/* table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
@@ -120,4 +117,4 @@ th, td {
 
 th {
     background-color: #f2f2f2;
-}
+} */

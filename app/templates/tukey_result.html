@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Tukey 預測結果{% endblock %}
+
+{% block content %}
+<div class="container" style="border: none; box-shadow: none;">
+    <div class="card border-dark shadow-sm">
+        <div class="card-header  text-align">
+            <h4>日期{{ date}}</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>國家</th>
+                            <th>油價</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>日本</td>
+                            <td>{{ j }}</td>
+                        </tr>
+                        <tr>
+                            <td>南韓</td>
+                            <td>{{ k }}</td>
+                        </tr>
+                        <tr>
+                            <td>香港</td>
+                            <td>{{ h }}</td>
+                        </tr>
+                        <tr>
+                            <td>新加坡</td>
+                            <td>{{ s }}</td>
+                        </tr>
+                        <tr>
+                            <td>上海</td>
+                            <td>{{ sh }}</td>
+                        </tr>
+                        <tr>
+                            <td>舟山</td>
+                            <td>{{ zh }}</td>
+                        </tr>
+                        
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-danger fs-4">CPC預測值 : <strong>{{ result_val }}</strong></p>
+        </div>
+    </div>
+</div>
+        
+
+<style>
+
+
+    /* .table th {
+        background-color: #ffb555;
+    } */
+
+   
+
+   
+</style>
+{% endblock %}
