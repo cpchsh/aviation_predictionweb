@@ -46,7 +46,7 @@
                 <h2 class="card-title">未來Prophet預測值</h2>
                 <p>以下是由Prophet預測出的未來7日值  <br>yhat:預測值,<br>yhat_lower:預測信賴區間下邊界,<br>yhat_upper:預測信賴區間上邊界:</p>
                 <!-- 建議加個容器 class 方便管理整個區塊空間 -->
-                <div class="table-container table-responsive">
+                <div class="table-container table-responsive prophet-table">
                     <table class="table custom-table text-center">
                       {{ future_table_html|safe }}
                     </table>
