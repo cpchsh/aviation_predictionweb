@@ -30,7 +30,7 @@ jobs:
 
     # 3.1 清除懸空映像檔
     - name: Clean up Dangling Images
-      run: docket image prune -f
+      run: docker image prune -f
 
     # 4. 停止或移除舊容器
     - name: Stop & Remove Old Container
