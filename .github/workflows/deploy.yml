@@ -20,22 +20,22 @@ jobs:
     - name: Sync Latest Code to Remote Directory
       run: |
         mkdir -p ~/aviation_predictionweb
-        rsync -av --delete "$GITHUB_WORKSPACE"/ ~/aviation_predictionweb/
+        rsync -av --delete --exclude '*.csv' "$GITHUB_WORKSPACE"/ ~/aviation_predictionweb/
     
-    # 2. 切換到專案目錄
+    # 3. 切換到專案目錄
     - name: Build Docker Image
       run: |
         cd ~/aviation_predictionweb
         docker build -t python312:v1.0.01 .
 
-    # 3. 停止或移除舊容器
+    # 4. 停止或移除舊容器
     - name: Stop & Remove Old Container
       run: |
         docker stop python312_container || true
         docker rm   python312_container || true
 
     
-    # 4. 執行新容器
+    # 5. 執行新容器
     - name: Run Container
       run: |
         docker run -d -p 5001:5000 --name python312_container python312:v1.0.01
