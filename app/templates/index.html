@@ -19,10 +19,8 @@
             <div class="card-body">
                 <h2 class="card-title">隔天 ({{ next_day }}) 價格預測 (Tukey Regressor)</h2>
                 <p class="card-text text-danger fs-5">預測值 (隔日): <b>{{ tukey_pred }}</b></p>
-                <a href="/#" class="btn">自訂輸入</a>
-                <!-- <a href="/tukey_form" class="btn">自訂輸入</a> -->
-                <a href="/#" class="btn">自訂輸入(不含日期)</a>
-                <!-- <a href="/tukey_form_noDate" class="btn">自訂輸入(不含日期)</a> -->
+                <a href="/tukey_form" class="btn">自訂輸入</a>
+                <a href="/tukey_form_noDate" class="btn">自訂輸入(不含日期)</a>
             </div>
         </div>
 
@@ -30,8 +28,7 @@
             <div class="card-body">
                 <h2 class="card-title">隔天 ({{ next_day }}) 價格預測 (XGB Regressor)</h2>
                 <p class="card-text text-danger fs-5">預測值 (隔日): <b>{{ xgb_pred }}</b></p>
-                <a href="/#" class="btn">自訂 XGB 輸入</a>
-                <!-- <a href="/xgb_form" class="btn">自訂 XGB 輸入</a> -->
+                <a href="/xgb_form" class="btn">自訂 XGB 輸入</a>
             </div>
         </div>
 
