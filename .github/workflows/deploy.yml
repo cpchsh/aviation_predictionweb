@@ -19,7 +19,6 @@ jobs:
     # 2. 切換到專案目錄
     - name: Build Docker Image
       run: |
-        cd ~/aviation_predictionweb &&
         docker build -t python312:v1.0.01 .
 
     # 3. 停止或移除舊容器
