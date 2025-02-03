@@ -96,6 +96,13 @@ def index():
         forecast = pd.read_csv("latest_forecast.csv")
         # 取最後 7 天的預測
         future_part = forecast.tail(7)[['ds', 'yhat', 'yhat_lower', 'yhat_upper']]
+        # 重新命名欄位名稱
+        future_part = future_part.rename(columns={
+            'ds': '日期',
+            'yhat': '預測值',
+            'yhat_lower': '預測信賴區間下界',
+            'yhat_upper': '預測信賴區間上界'
+        })
         #print("future_part",future_part)
         value = future_part.iloc[0,1]
         f_value = f"{value:.2f}"
