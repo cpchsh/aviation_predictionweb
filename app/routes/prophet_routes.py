@@ -30,6 +30,7 @@ def append_and_train():
 
     temp_df['日期'] = pd.to_datetime(temp_df['日期'])
     data_df['日期'] = pd.to_datetime(data_df['日期'])
+
     temp_df.sort_values('日期', inplace=True)
     data_df.sort_values('日期', inplace=True)
 
@@ -56,7 +57,7 @@ def append_and_train():
 @prophet_bp.route("/api/prophet_forecast", methods=["GET"])
 def get_forecast_json():
     """
-    回傳 Prophet預測的未來資料(含歷史也可),
+    回傳 Prophet 預測的 (全部) 資料
     以 JSON 格式給前端 Chart.js使用
     """
     if not os.path.exists("latest_forecast.csv"):
@@ -66,25 +67,26 @@ def get_forecast_json():
     # 先轉成 datetime，再以 YYYY-MM-DD 格式輸出
     df["ds"] = pd.to_datetime(df["ds"])
     df["ds"] = df["ds"].dt.strftime("%Y-%m-%d")
-    #df["ds"] = df["ds"].dt.strftime("%Y-%m-%d")
 
-    if not all(col in df.columns for col in ["ds",  "yhat", "yhat_lower", "yhat_upper"]):
-        return jsonify({"error" : "Required columns not found in forecast csv"}), 400
+    needed_cols = ["ds","yhat","yhat_lower","yhat_upper"]
+    if not all(col in df.columns for col in needed_cols):
+        return jsonify({"error":"Required columns not found"}), 400
     
-    records = df[["ds", "yhat", "yhat_lower", "yhat_upper"]].to_dict(orient="records")
-
+    records = df[needed_cols].to_dict(orient="records")
     return jsonify(records)
 
 @prophet_bp.route("/api/historical_data", methods=["GET"])
 def get_historical_data():
+    """
+    回傳歷史實際值 y
+    """
     if not os.path.exists("資料集_new.csv"):
         return jsonify({"error": "No historical data"}), 404
+    
     df = pd.read_csv("資料集_new.csv")
     df.columns = df.columns.str.strip()
     df.rename(columns={"日期":"ds", "CPC":"y"}, inplace=True)
-    df["ds"] = pd.to_datetime(df["ds"])
-    # 格式化成 "YYYY-MM-DD"
-    df["ds"] = df["ds"].dt.strftime("%Y-%m-%d")
+    df["ds"] = pd.to_datetime(df["ds"]).dt.strftime("%Y-%m-%d")
     # 選擇想回傳的欄位
     records = df[["ds","y"]].to_dict(orient="records")
     return jsonify(records)
@@ -109,15 +111,13 @@ def get_prophet_recent_future():
     df_base = pd.read_csv("資料集_new.csv")
     df_base.columns = df_base.columns.str.strip()
     df_base.rename(columns={"日期": "ds", "CPC": "y"}, inplace=True)
-    df_base["ds"] = pd.to_datetime(df_base["ds"])
-    df_base["ds"] = df_base["ds"].dt.strftime("%Y-%m-%d")
+    df_base["ds"] = pd.to_datetime(df_base["ds"]).dt.strftime("%Y-%m-%d")
 
     # 找最後日期(資料集裡 or forecast裡)
     last_date_str = df_base["ds"].max()
     last_date = pd.to_datetime(last_date_str)
 
     start_15days_ago = last_date - pd.Timedelta(days=14)
-
     # recent15 => df_base 中 ds 在 [start_15days_ago, last_date]
     df_recent15 = df_base[
         (pd.to_datetime(df_base["ds"]) >= start_15days_ago) &
