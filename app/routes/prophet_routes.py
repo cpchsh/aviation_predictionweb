@@ -52,3 +52,88 @@ def append_and_train():
     except subprocess.CalledProcessError as e:
         msg += f" - Train script failed: {e}"
         return jsonify({"message": msg}), 500
+    
+@prophet_bp.route("/api/prophet_forecast", methods=["GET"])
+def get_forecast_json():
+    """
+    回傳 Prophet預測的未來資料(含歷史也可),
+    以 JSON 格式給前端 Chart.js使用
+    """
+    if not os.path.exists("latest_forecast.csv"):
+        return jsonify({"error": "No forecast data found"}), 404
+    
+    df = pd.read_csv("latest_forecast.csv")
+    # 先轉成 datetime，再以 YYYY-MM-DD 格式輸出
+    df["ds"] = pd.to_datetime(df["ds"])
+    df["ds"] = df["ds"].dt.strftime("%Y-%m-%d")
+    #df["ds"] = df["ds"].dt.strftime("%Y-%m-%d")
+
+    if not all(col in df.columns for col in ["ds",  "yhat", "yhat_lower", "yhat_upper"]):
+        return jsonify({"error" : "Required columns not found in forecast csv"}), 400
+    
+    records = df[["ds", "yhat", "yhat_lower", "yhat_upper"]].to_dict(orient="records")
+
+    return jsonify(records)
+
+@prophet_bp.route("/api/historical_data", methods=["GET"])
+def get_historical_data():
+    if not os.path.exists("資料集_new.csv"):
+        return jsonify({"error": "No historical data"}), 404
+    df = pd.read_csv("資料集_new.csv")
+    df.columns = df.columns.str.strip()
+    df.rename(columns={"日期":"ds", "CPC":"y"}, inplace=True)
+    df["ds"] = pd.to_datetime(df["ds"])
+    # 格式化成 "YYYY-MM-DD"
+    df["ds"] = df["ds"].dt.strftime("%Y-%m-%d")
+    # 選擇想回傳的欄位
+    records = df[["ds","y"]].to_dict(orient="records")
+    return jsonify(records)
+
+@prophet_bp.route("/api/prophet_recent_future", methods = ["GET"])
+def get_prophet_recent_future():
+    """
+    回傳「最近15天 + 未來7天」的資料:
+      - recent15: [{ds, y}, ...]
+      - future7: [{ds, yhat, yhat_lower, yhat_upper}, ...]
+    """
+    if not os.path.exists("latest_forecast.csv"):
+        return jsonify({"error": "No forecast data found"}), 404
+    
+    df_forecast = pd.read_csv("latest_forecast.csv")
+    # 確保ds都為同一格式
+    df_forecast["ds"] = pd.to_datetime(df_forecast["ds"]).dt.strftime("%Y-%m-%d")
+
+    # 讀取原始 data (含真實y)
+    if not os.path.exists("資料集_new.csv"):
+        return jsonify({"error":"no base data"}), 404
+    df_base = pd.read_csv("資料集_new.csv")
+    df_base.columns = df_base.columns.str.strip()
+    df_base.rename(columns={"日期": "ds", "CPC": "y"}, inplace=True)
+    df_base["ds"] = pd.to_datetime(df_base["ds"])
+    df_base["ds"] = df_base["ds"].dt.strftime("%Y-%m-%d")
+
+    # 找最後日期(資料集裡 or forecast裡)
+    last_date_str = df_base["ds"].max()
+    last_date = pd.to_datetime(last_date_str)
+
+    start_15days_ago = last_date - pd.Timedelta(days=14)
+
+    # recent15 => df_base 中 ds 在 [start_15days_ago, last_date]
+    df_recent15 = df_base[
+        (pd.to_datetime(df_base["ds"]) >= start_15days_ago) &
+        (pd.to_datetime(df_base["ds"]) <= last_date)
+    ].copy()
+
+    # future7 => df_forecast 中 ds > last_date
+    df_future7 = df_forecast[
+        pd.to_datetime(df_forecast["ds"]) > last_date
+    ].copy()
+
+    # 轉成 list of dict
+    recent_part = df_recent15[["ds", "y"]].to_dict(orient="records")
+    future_part = df_future7[["ds", "yhat", "yhat_lower", "yhat_upper"]].to_dict(orient="records")
+
+    return jsonify({
+        "recent15": recent_part,
+        "future7": future_part
+    })
