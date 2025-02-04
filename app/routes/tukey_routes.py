@@ -1,5 +1,4 @@
 from flask import Blueprint, render_template, request, redirect, render_template, flash
-import joblib
 import pandas as pd
 import os
 import time
@@ -7,9 +6,17 @@ import requests
 from datetime import datetime
 import pymssql
 from datetime import date, datetime
+from dotenv import load_dotenv
+
 
 tukey_bp = Blueprint('tukey_bp', __name__)
 
+# 讀取 .env 文件
+load_dotenv()
+server = os.getenv("DB_SERVER")
+user = os.getenv("DB_USER")
+password = os.getenv("DB_PASSWORD")
+database = os.getenv("DB_NAME")
 
 def fetch_latest_data(cursor, today):
     """ 查詢最新兩筆資料 """
@@ -135,7 +142,7 @@ def predict_next_day_tukey():
 
     try:
         # **連線到資料庫**
-        conn = pymssql.connect(server='REMOVED_INFORMATION', user=r'cpc\REMOVED_NUM', password=r'REMOVED_INFO',  database='BDC_TEST')
+        conn = pymssql.connect(server=server, user=user, password=password,  database=database)
         cursor = conn.cursor(as_dict=True)  
 
         '''
