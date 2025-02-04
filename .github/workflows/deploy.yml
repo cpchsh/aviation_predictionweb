@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - 'cpca/*' 
-      - 'cpcb/*'
+      - 'cpcB/*'
 
 jobs:
   deploy:
