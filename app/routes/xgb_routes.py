@@ -1,7 +1,6 @@
 from flask import Blueprint, render_template, request
 import joblib
 import pandas as pd
-import os
 
 xgb_bp = Blueprint('xgb_bp', __name__)
 
@@ -52,42 +51,3 @@ def xgb_predict_custom():
                            result_val=result_str,
                            j=japan,k=korea,h=hongkong,
                            s=singapore,sh=shanghai,zh=zhoushan)
-
-def predict_next_day_xgb():
-    """
-    讀取data, 建立lag, 取最後一列-> xgb預測
-    """
-    file_path='./資料集_new.csv'
-    data=pd.read_csv(file_path)
-    data.columns=data.columns.str.strip()
-    data.rename(columns={
-        '日期': 'ds', 'CPC': 'y',
-        '日本': 'japan', '南韓': 'korea', '香港': 'hongkong',
-        '新加坡': 'singapore', '上海': 'shanghai', '舟山': 'zhoushan'
-    }, inplace=True)
-
-    data['ds'] = pd.to_datetime(data['ds'])
-    data.sort_values(by='ds', inplace=True)
-    data[['y','japan','korea','hongkong','singapore','shanghai','zhoushan']] = \
-        data[['y','japan','korea','hongkong','singapore','shanghai','zhoushan']].ffill().bfill()
-    
-    N_LAGS = 3
-    for i in range(1, N_LAGS+1):
-        data[f'y_lag_{i}'] = data['y'].shift(i)
-    data.dropna(inplace=True)
-
-    last_row = data.iloc[-1]
-    X_future = pd.DataFrame([{
-        'japan':     last_row['japan'],
-        'korea':     last_row['korea'],
-        'hongkong':  last_row['hongkong'],
-        'singapore': last_row['singapore'],
-        'shanghai':  last_row['shanghai'],
-        'zhoushan':  last_row['zhoushan'],
-        'y_lag_1':   last_row['y'],
-        'y_lag_2':   last_row['y_lag_1'],
-        'y_lag_3':   last_row['y_lag_2']
-    }])
-
-    y_pred = xgb_model.predict(X_future)[0]
-    return y_pred
