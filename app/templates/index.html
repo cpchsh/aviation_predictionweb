@@ -1,108 +1,420 @@
 {% extends "base.html" %}
-
 {% block title %}Tukey 預測結果{% endblock %}
 
 {% block content %}
-    <!-- Loading 動畫 -->
-    <div id="loading">
-        <div class="d-flex justify-content-center align-items-center flex-column">
-            <div class="spinner-border text-primary" role="status"></div>
-            <span class="mt-2">Processing... Please wait.</span>
-        </div>
+<div id="loading" style="display:none;">
+  <div class="d-flex justify-content-center align-items-center flex-column">
+    <div class="spinner-border text-primary" role="status"></div>
+    <span class="mt-2">Processing... Please wait.</span>
+  </div>
+</div>
+
+<div class="container my-4">
+  <!-- XGB / Prophet 簡報區 (略) -->
+  <!-- XGB 預測結果 -->
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h2 class="card-title">
+        今天 ({{ next_day }}) 價格預測 (Tukey)
+      </h2>
+     <p class="card-text text-danger fs-5">預測值 (今天): <b style="display: none;">{{ tukey_pred }}</b></p>
+      <a href="/tukey_form" class="btn">自訂輸入</a>
+      <a href="/tukey_form_noDate" class="btn">自訂輸入(不含日期)</a>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h2 class="card-title">今天 ({{ next_day }}) 價格預測 (XGB Regressor)</h2>
+      <p class="card-text text-danger fs-5">
+        預測值 (今天): <b>{{ xgb_pred }}</b>
+      </p>
+      <a href="/xgb_form" class="btn">自訂 XGB 輸入</a>
+    </div>
+  </div>
+
+  <!-- Prophet 預測結果 -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h2 class="card-title">今天 ({{ next_day }}) 價格預測 (Prophet)</h2>
+      <p class="card-text text-danger fs-5">
+        預測值 (今天): <b>{{ prophet_fvalue }}</b>
+      </p>
+    </div>
+  </div>
+
+  <!-- Latest Forecast 表格 -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h2 class="card-title">未來Prophet預測值</h2>
+      <!-- 建議加個容器 class 方便管理整個區塊空間 -->
+      <div class="table-container table-responsive prophet-table">
+        {{ future_table_html|safe }}
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Prophet Plot A - 全歷史圖 + 篩選器 -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <h3>Prophet Plot A - 全歷史圖（可篩日期）</h3>
+
+      <!-- 篩選器表單 -->
+      <div class="mb-2">
+        <label>開始日期: <input type="date" id="startDateInput" /></label>
+        <label>結束日期: <input type="date" id="endDateInput" /></label>
+        <button id="applyFilterBtn" class="btn btn-sm btn-primary">套用篩選</button>
+      </div>
+
+      <canvas id="prophetChart" width="500" height="400"></canvas>
     </div>
 
-    <!-- 主要內容 -->
-    <div class="container my-4">
-        <!-- XGB 預測結果 -->
-
-        <div class="card mb-4">
-            <div class="card-body">
-                <h2 class="card-title">今天 ({{ next_day }}) 價格預測 (Tukey)</h2>
-                <p class="card-text text-danger fs-5">預測值 (今天): <b style="display: none;">{{ tukey_pred }}</b></p>
-                <a href="/tukey_form" class="btn">自訂輸入</a>
-                <a href="/tukey_form_noDate" class="btn">自訂輸入(不含日期)</a>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-body">
-                <h2 class="card-title">今天 ({{ next_day }}) 價格預測 (XGB Regressor)</h2>
-                <p class="card-text text-danger fs-5">預測值 (今天): <b>{{ xgb_pred }}</b></p>
-                <a href="/xgb_form" class="btn">自訂 XGB 輸入</a>
-            </div>
-        </div>
-
-        <!-- Prophet 預測結果 -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <h2 class="card-title">今天 ({{ next_day }}) 價格預測 (Prophet)</h2>
-                <p class="card-text text-danger fs-5">預測值 (今天): <b>{{ prophet_fvalue }}</b></p>
-            </div>
-        </div>
-
-        <!-- Latest Forecast 表格 -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <h2 class="card-title">未來Prophet預測值</h2>
-                <p>以下是由Prophet預測出的未來7日值  <br>yhat:預測值,<br>yhat_lower:預測信賴區間下邊界,<br>yhat_upper:預測信賴區間上邊界:</p>
-                <!-- 建議加個容器 class 方便管理整個區塊空間 -->
-                <div class="table-container table-responsive">
-                    <table class="table custom-table text-center">
-                      {{ future_table_html|safe }}
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- 圖表 -->
-        <div class="row">
-            <div class="col-md-6 mb-4">
-                <h3 >Prophet Plot A - 全歷史圖</h3>
-                {% if plot_full_url %}
-                  <img src="{{ plot_full_url }}" alt="Plot Full" class="img-fluid">
-                {% else %}
-                  <p>No plot_full.png found</p>
-                {% endif %}
-            </div>
-            <div class="col-md-6 mb-4">
-                <h3 >Prophet Plot B - 最近 15日 + 未來 7日</h3>
-                {% if plot_recent_url %}
-                  <img src="{{ plot_recent_url }}" alt="Plot Recent" class="img-fluid">
-                {% else %}
-                  <p>No plot_recent_url.png found</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Append and Train 按鈕 -->
-        <div class="text-center">
-            <button id="appendAndTrainBtn" class="btn btn-lg">更新和重訓資料</button>
-        </div>
+    <div class="col-md-6">
+      <h3>Prophet Plot B - 最近15 + 未來7</h3>
+      <canvas id="recentFutureChart" width="500" height="400"></canvas>
     </div>
+  </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        $(document).ready(function () {
-            $('#appendAndTrainBtn').on('click', function () {
-                $('#loading').show(); // 顯示 loading 動畫
-                $(this).prop('disabled', true); // 禁用按鈕
-                $.ajax({
-                    url: '/append_and_train',
-                    type: 'POST',
-                    success: function (response) {
-                        $('#loading').hide(); // 隱藏 loading 動畫
-                        $('#appendAndTrainBtn').prop('disabled', false); // 啟用按鈕
-                        alert(response.message); // 顯示伺服器返回的提示訊息
-                        location.reload(); // 刷新頁面以更新內容
-                    },
-                    error: function () {
-                        $('#loading').hide();
-                        $('#appendAndTrainBtn').prop('disabled', false); // 啟用按鈕
-                        alert('An error occurred while processing.');
-                    }
-                });
-            });
-        });
-    </script>
+  <!-- 其餘區塊： XGB 預測值, Prophet 預測表格, 按鈕... -->
+  <div class="text-center">
+    <button id="appendAndTrainBtn" class="btn btn-lg">更新和重訓資料</button>
+  </div>
+</div>
 
+<!-- jQuery + Chart.js + date-fns -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+
+<script>
+// 全域變數，儲存所有「全歷史」資料
+let rawHistData = [];
+let rawForecastData = [];
+let chartA = null;  // Plot A 的 Chart 實例
+
+document.addEventListener("DOMContentLoaded", () => {
+  // 1) 取得 /api/historical_data & /api/prophet_forecast
+  Promise.all([
+    fetch("/api/historical_data").then(r=>r.json()),
+    fetch("/api/prophet_forecast").then(r=>r.json())
+  ])
+  .then(([histData, forecastData]) => {
+    console.log("Historical data:", histData);
+    console.log("Forecast data:", forecastData);
+
+    // 全域存起來
+    window.rawHistData = histData;
+    window.rawForecastData = forecastData;
+
+    // 初始化畫圖(不篩選 => 全部)
+    initProphetChartA(histData, forecastData);
+
+  })
+  .catch(err=> {
+    console.error("Error fetch hist/forecast:", err);
+  });
+
+  // 2) recent + future (Plot B)
+  fetch("/api/prophet_recent_future")
+    .then(res=>res.json())
+    .then(data => {
+      console.log("recent_future data:", data);
+      initProphetChartB(data);
+    })
+    .catch(err=> {
+      console.error("Error fetch /api/prophet_recent_future", err);
+    });
+
+  // 3) 「套用篩選」按鈕
+  const applyBtn = document.getElementById("applyFilterBtn");
+  applyBtn.addEventListener("click", () => {
+    // 讀取 start/end date
+    const startDateStr = (document.getElementById("startDateInput").value || "").trim();
+    const endDateStr   = (document.getElementById("endDateInput").value || "").trim();
+
+    if(!startDateStr || !endDateStr){
+      alert("請選擇 開始日期、結束日期");
+      return;
+    }
+
+    const startDate = new Date(startDateStr);
+    const endDate   = new Date(endDateStr);
+    if(startDate > endDate){
+      alert("開始日期 不可大於 結束日期");
+      return;
+    }
+
+    // 過濾
+    updateChartAWithRange(startDate, endDate);
+  });
+
+  // Append & Train
+  $("#appendAndTrainBtn").on("click", function(){
+    $("#loading").show();
+    $(this).prop("disabled",true);
+    $.ajax({
+      url:"/append_and_train",
+      type:"POST",
+      success:function(resp){
+        $("#loading").hide();
+        $("#appendAndTrainBtn").prop("disabled",false);
+        alert(resp.message);
+        location.reload();
+      },
+      error:function(){
+        $("#loading").hide();
+        $("#appendAndTrainBtn").prop("disabled",false);
+        alert("An error occurred while processing.");
+      }
+    })
+  });
+});
+
+// ---------------------
+// Plot A init
+function initProphetChartA(histData, forecastData){
+  // 1) 組合 ds
+  const allDates = new Set([
+    ...histData.map(d=> d.ds),
+    ...forecastData.map(d=> d.ds)
+  ]);
+  const sortedDates = Array.from(allDates).sort((a,b)=> new Date(a)-new Date(b));
+
+  // 2) dataset
+  const histScatter = {
+    label: "實際值(散點)",
+    data: sortedDates.map(ds => {
+      const row = histData.find(h=> h.ds===ds);
+      return row ? {x: ds, y: row.y} : null;
+    }).filter(pt => pt!==null),
+    showLine:false,
+    pointRadius:1,
+    borderColor:"black",
+    backgroundColor:"black"
+  };
+
+  const yhatLine = {
+    label:"預測值",
+    data: sortedDates.map(ds => {
+      const row = forecastData.find(f=> f.ds===ds);
+      return row ? { x:ds, y: row.yhat} : null;
+    }).filter(pt=> pt!==null),
+    borderColor:"#87CEFA",
+    borderWidth:1,
+    fill:false,
+    tension:0.1
+  };
+  const lowerLine = {
+    label:"預測信賴區間下界",
+    data: sortedDates.map(ds=>{
+      const row= forecastData.find(f=>f.ds===ds);
+      return row? { x:ds, y: row.yhat_lower}:null;
+    }).filter(pt=>pt!==null),
+    borderColor:"rgba(0,0,0,0)",
+    pointRadius:0,
+    fill:false
+  };
+  const upperLine = {
+    label:"信賴區間",
+    data: sortedDates.map(ds=>{
+      const row= forecastData.find(f=>f.ds===ds);
+      return row? { x:ds, y: row.yhat_upper}:null;
+    }).filter(pt=>pt!==null),
+    borderColor:"rgba(0,0,0,0)",
+    backgroundColor:"rgba(0,0,255,0.2)",
+    pointRadius:0,
+    fill:"-1"
+  };
+
+  const ctxA = document.getElementById("prophetChart").getContext("2d");
+  const chartData = {
+    labels: sortedDates,
+    datasets:[histScatter, lowerLine, upperLine, yhatLine]
+  };
+  const options = {
+    responsive:true,
+    //parsing:false,
+    scales:{
+      x:{
+        type:"time",
+        time:{ parser:"yyyy-MM-dd", unit:"day", displayFormats:{day:"yyyy-MM-dd"}},
+        title:{ display:true, text:"Date"}
+      },
+      y:{
+        title:{ display:true, text:"CPC 價格"}
+      }
+    },
+    plugins:{
+      legend:{ display:true},
+      title:{ display:false}
+    }
+  };
+  window.chartA = new Chart(ctxA, {
+    type:"line",
+    data: chartData,
+    options: options
+  });
+}
+
+// ---------------------
+// 當使用者選了 startDate ~ endDate 後, 過濾並更新 chartA
+function updateChartAWithRange(startDate, endDate){
+  if(!window.chartA) return;
+
+  // 過濾 rawHistData、rawForecastData
+  const filteredHist = window.rawHistData.filter(d=>{
+    const dtime = new Date(d.ds);
+    return dtime >= startDate && dtime <= endDate;
+  });
+  const filteredForecast = window.rawForecastData.filter(d=>{
+    const dtime = new Date(d.ds);
+    return dtime >= startDate && dtime <= endDate;
+  });
+
+  // 重新組 dataset
+  // 1) 收集所有 ds
+  const allDates = new Set([
+    ...filteredHist.map(d=> d.ds),
+    ...filteredForecast.map(d=> d.ds)
+  ]);
+  const sortedDates = Array.from(allDates).sort((a,b)=> new Date(a)- new Date(b));
+
+  // 2) dataset
+  const histScatter = {
+    label: "實際值(散點)",
+    data: sortedDates.map(ds=>{
+      const row = filteredHist.find(h=>h.ds===ds);
+      return row? {x:ds, y: row.y}:null;
+    }).filter(pt=>pt!==null),
+    showLine:false,
+    pointRadius:1,
+    borderColor:"black",
+    backgroundColor:"black"
+  };
+
+  const yhatLine = {
+    label:"預測值",
+    data: sortedDates.map(ds=>{
+      const row = filteredForecast.find(f=> f.ds===ds);
+      return row? {x:ds,y:row.yhat}:null;
+    }).filter(pt=>pt!==null),
+    borderColor:"#87CEFA",
+    borderWidth:1,
+    fill:false,
+    tension:0.1
+  };
+
+  const lowerLine = {
+    label:"預測信賴區間下界",
+    data: sortedDates.map(ds=>{
+      const row = filteredForecast.find(f=>f.ds===ds);
+      return row? {x:ds, y: row.yhat_lower}:null;
+    }).filter(pt=>pt!==null),
+    borderColor:"rgba(0,0,0,0)",
+    pointRadius:0,
+    fill:false
+  };
+
+  const upperLine = {
+    label:"信賴區間",
+    data: sortedDates.map(ds=>{
+      const row = filteredForecast.find(f=>f.ds===ds);
+      return row? {x:ds, y: row.yhat_upper}:null;
+    }).filter(pt=>pt!==null),
+    borderColor:"rgba(0,0,0,0)",
+    backgroundColor:"rgba(0,0,255,0.2)",
+    pointRadius:0,
+    fill:"-1"
+  };
+
+  // update chart
+  window.chartA.data.labels = sortedDates;
+  window.chartA.data.datasets = [histScatter, lowerLine, upperLine, yhatLine];
+  window.chartA.update();
+}
+
+// ---------------------
+// Plot B
+function initProphetChartB(data){
+  // data => { recent15, future7 }
+  const recent15 = data.recent15 || [];
+  const future7  = data.future7  || [];
+
+  const recentDataset = {
+    label: "最近15日實際值",
+    data: recent15.map(r=> ({ x:r.ds, y:r.y })),
+    borderColor:"black",
+    backgroundColor:"black",
+    showLine:true,
+    pointRadius:4,
+    fill:false
+  };
+
+  const futureLine = {
+    label:"未來7日預測值",
+    data: future7.map(r=>({x:r.ds,y:r.yhat})),
+    borderColor:"blue",
+    borderDash:[5,5],
+    fill:false,
+    tension:0.1
+  };
+
+  const futureLower = {
+    label:"預測信賴區間下界",
+    data: future7.map(r=>({x:r.ds,y:r.yhat_lower})),
+    borderColor:"rgba(0,0,0,0)",
+    pointRadius:0,
+    fill:false
+  };
+
+  const futureUpper = {
+    label:"信賴區間",
+    data: future7.map(r=>({x:r.ds,y:r.yhat_upper})),
+    borderColor:"rgba(0,0,0,0)",
+    backgroundColor:"rgba(0,0,255,0.2)",
+    pointRadius:0,
+    fill:"-1"
+  };
+
+  const allDates = [...recent15.map(d=>d.ds), ...future7.map(d=>d.ds)];
+  const sorted = Array.from(new Set(allDates)).sort((a,b)=> new Date(a)- new Date(b));
+
+  const ctxB = document.getElementById("recentFutureChart").getContext("2d");
+  new Chart(ctxB, {
+    type:'line',
+    data:{
+      labels: sorted,
+      datasets:[recentDataset, futureLower, futureUpper, futureLine]
+    },
+    options:{
+      responsive:true,
+      //parsing:false,
+      scales:{
+        x:{
+          type:'time',
+          time:{
+            parser:'yyyy-MM-dd',
+            unit:'day',
+            displayFormats:{ day:'yyyy-MM-dd'}
+          },
+          title:{display:true, text:"Date"}
+        },
+        y:{
+          title:{display:true, text:"CPC 價格"}
+        }
+      },
+      plugins:{
+        legend:{display:true},
+        title:{
+          display:false,
+          text:"(最近15 + 未來7) "
+        }
+      }
+    }
+  })
+}
+
+</script>
 {% endblock %}
