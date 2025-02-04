@@ -8,17 +8,23 @@ from app.services.xgb_service import predict_next_day_xgb
 # 建立 Blueprint 物件
 main_bp = Blueprint('main_bp', __name__)
 
+
 @main_bp.route("/", methods=["GET"])
 def index():
+  
+    # Tukey 預測
+    next_day_tukey = predict_next_day_tukey()
     # 1) 用 XGB 預測下一天
     next_day_pred = predict_next_day_xgb(
         model_path="./xgb_model_new.pkl",
         csv_path="./資料集_new.csv"
     )
+
     next_day_pred_str = f"{next_day_pred:.2f}"
     
     # 2) 讀取預測結果 CSV (latest_forecast.csv)
     if os.path.exists("./latest_forecast.csv"):
+
         forecast = pd.read_csv("latest_forecast.csv",encoding="utf-8-sig")
         forecast.columns = forecast.columns.str.strip()  # 去除欄位名稱前後的空白
         # 取最後 7 天的預測
@@ -50,6 +56,7 @@ def index():
     return render_template(
         "index.html",
         next_day=f_day,
+       #    next_day2=next_day_tukey[0],
         xgb_pred=next_day_pred_str,
         prophet_fvalue=f_value,
         future_table_html=future_table_html,

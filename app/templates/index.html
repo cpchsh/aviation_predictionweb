@@ -16,11 +16,9 @@
   <div class="card mb-4">
     <div class="card-body">
       <h2 class="card-title">
-        隔天 ({{ next_day }}) 價格預測 (Tukey Regressor)
+        今天 ({{ next_day }}) 價格預測 (Tukey)
       </h2>
-      <p class="card-text text-danger fs-5">
-        預測值 (隔日): <b>{{ tukey_pred }}</b>
-      </p>
+     <p class="card-text text-danger fs-5">預測值 (今天): <b style="display: none;">{{ tukey_pred }}</b></p>
       <a href="/tukey_form" class="btn">自訂輸入</a>
       <a href="/tukey_form_noDate" class="btn">自訂輸入(不含日期)</a>
     </div>
@@ -28,9 +26,9 @@
 
   <div class="card mb-4">
     <div class="card-body">
-      <h2 class="card-title">隔天 ({{ next_day }}) 價格預測 (XGB Regressor)</h2>
+      <h2 class="card-title">今天 ({{ next_day }}) 價格預測 (XGB Regressor)</h2>
       <p class="card-text text-danger fs-5">
-        預測值 (隔日): <b>{{ xgb_pred }}</b>
+        預測值 (今天): <b>{{ xgb_pred }}</b>
       </p>
       <a href="/xgb_form" class="btn">自訂 XGB 輸入</a>
     </div>
@@ -39,9 +37,9 @@
   <!-- Prophet 預測結果 -->
   <div class="card mb-4">
     <div class="card-body">
-      <h2 class="card-title">隔天 ({{ next_day }}) 價格預測 (Prophet)</h2>
+      <h2 class="card-title">今天 ({{ next_day }}) 價格預測 (Prophet)</h2>
       <p class="card-text text-danger fs-5">
-        預測值 (隔日): <b>{{ prophet_fvalue }}</b>
+        預測值 (今天): <b>{{ prophet_fvalue }}</b>
       </p>
     </div>
   </div>
@@ -56,6 +54,7 @@
       </div>
     </div>
   </div>
+
 
   <!-- Prophet Plot A - 全歷史圖 + 篩選器 -->
   <div class="row mb-4">
