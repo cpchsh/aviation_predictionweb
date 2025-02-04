@@ -7,7 +7,7 @@ main_bp = Blueprint('main_bp', __name__)
 
 # 可能還需要載入你的 XGB 函式
 from app.routes.xgb_routes import predict_next_day_xgb
-
+from app.routes.tukey_routes import predict_next_day_tukey
 @main_bp.route("/", methods=["GET"])
 def index():
     """
@@ -16,6 +16,9 @@ def index():
      2) 若有 latest_forecast.csv，讀取 Prophet結果並顯示
      3) 顯示圖檔等
     """
+    # Tukey 預測
+    next_day_tukey = predict_next_day_tukey()
+   
     # XGB 預測
     next_day_pred = predict_next_day_xgb()
     next_day_pred_str = f"{next_day_pred:.2f}"
@@ -37,6 +40,8 @@ def index():
 
     return render_template("index.html",
                            next_day=f_day,
+                        #    next_day2=next_day_tukey[0],
+                           tukey_pred=f"{next_day_tukey[1]:.2f}",
                            xgb_pred=next_day_pred_str,
                            prophet_fvalue=f_value,
                            future_table_html=future_table_html,
