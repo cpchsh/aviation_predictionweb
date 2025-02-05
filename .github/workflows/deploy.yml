@@ -42,4 +42,9 @@ jobs:
     # 5. 執行新容器
     - name: Run Container
       run: |
-        docker run -d -p 5001:5000 --name python312_container python312:v1.0.01
+        docker run -d -p 5001:5000 --name python312_container \
+          -e DB_SERVER=${{ secrets.DB_SERVER }} \
+          -e DB_USER=${{ secrets.DB_USER }} \
+          -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+          -e DB_NAME=${{ secrets.DB_NAME }} \
+          python312:v1.0.01
