@@ -10,8 +10,14 @@ on:
 jobs:
   deploy:
     runs-on: [self-hosted]
-    steps:
+    # 聲明引用變數
+    env:
+      DB_SERVER: ${{ secrets.DB_SERVER }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_NAME: ${{ secrets.DB_NAME }}
 
+    steps:
     # 1. 取用code
     - name: Checkout repository
       uses: actions/checkout@v3
