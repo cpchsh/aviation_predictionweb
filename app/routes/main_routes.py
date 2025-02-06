@@ -57,7 +57,7 @@ def index():
         "index.html",
         next_day=f_day,
        #    next_day2=next_day_tukey[0],
-        #tukey_pred=next_day_tukey[1],
+       #tukey_pred=next_day_tukey[1],
         xgb_pred=next_day_pred_str,
         prophet_fvalue=f_value,
         future_table_html=future_table_html,

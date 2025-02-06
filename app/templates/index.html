@@ -18,7 +18,8 @@
       <h2 class="card-title">
         今天 ({{ next_day }}) 價格預測 (Tukey)
       </h2>
-     <p class="card-text text-danger fs-5">預測值: <b style="display: none;">{{ tukey_pred }}</b></p>
+      <!-- <p class="card-text text-danger fs-5">預測值: <b>{{ tukey_pred }}</b></p> -->
+      <p class="card-text text-danger fs-5">預測值: <b style="display: none;">{{ tukey_pred }}</b></p>
       <a href="/tukey_form" class="btn">自訂輸入</a>
       <a href="/tukey_form_noDate" class="btn">自訂輸入(不含日期)</a>
     </div>
@@ -72,7 +73,7 @@
     </div>
 
     <div class="col-md-6">
-      <h3>Prophet Plot B - 最近15 + 未來7</h3>
+      <h3>Prophet Plot B - 最近15 + 未來7日</h3>
       <canvas id="recentFutureChart" width="500" height="400"></canvas>
     </div>
   </div>
