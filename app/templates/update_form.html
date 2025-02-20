@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Update{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- <button type="button" class="btn3 p-0" data-bs-toggle="popover" data-bs-html="true" data-bs-placement="right"
+        data-bs-content="1. 當日請輸入昨日的地區油價<br>2. 回首頁查看預測值<br>3. 新增公告的 CPC 值">
+        ℹ️
+    </button> -->
+    <button type="button" class="p-9 border-0 bg-transparent text-primary" data-bs-toggle="popover" data-bs-html="true" data-bs-placement="right"
+        data-bs-content="1. 請輸入昨日的地區油價<br>2. 回首頁查看預測值<br>3. 新增公告的 CPC 值">
+    ℹ️說明
+</button>
+
+    <form action="/update" method="POST" class="card p-4" style="border: none;" id="submitForm"> 
+        <fieldset>
+            <h3 style="font-weight: bold; display: inline-block;">地區油價</h3>
+            <div class="mb-3">
+                <label for="date" class="form-label">日期:</label>
+                <input type="date" id="date" name="date" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label for="japan" class="form-label">日本:</label>
+                <input type="number" id="japan" name="japan" class="form-control" step="any" min="1">
+            </div>
+            <div class="mb-3">
+                <label for="korea" class="form-label">南韓:</label>
+                <input type="number" id="korea" name="korea" class="form-control" step="any" min="1">
+            </div>
+            <div class="mb-3">
+                <label for="hongkong" class="form-label">香港:</label>
+                <input type="number" id="hongkong" name="hongkong" class="form-control" step="any" min="1">
+            </div>
+            <div class="mb-3">
+                <label for="singapore" class="form-label">新加坡:</label>
+                <input type="number" id="singapore" name="singapore" class="form-control" step="any" min="1">
+            </div>
+            <div class="mb-3">
+                <label for="shanghai" class="form-label">上海:</label>
+                <input type="number" id="shanghai" name="shanghai" class="form-control" step="any" min="1">
+            </div>
+            <div class="mb-3">
+                <label for="zhoushan" class="form-label">舟山:</label>
+                <input type="number" id="zhoushan" name="zhoushan" class="form-control" step="any" min="1">
+            </div>
+            <h3 style="font-weight: bold;">{{cpcDate}} CPC油價: {{price}}</h3>
+            <div class="mb-3">
+                <label for="cpc" class="form-label">{{description}} :</label>
+                <input type="number" id="cpc" name="cpc" class="form-control" step="any" min="1">
+            </div>
+            <div class="text-center">
+                <button type="submit" class="btn btn-lg">送出</button>
+            </div>
+        </fieldset>
+    </form>
+
+</div>
+
+<div class="modal fade" id="warning" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">訊息</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 訊息顯示 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- 確認更新 Modal -->
+<div class="modal fade" id="confirmUpdateModal" tabindex="-1" aria-labelledby="confirmUpdateLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmUpdateLabel">確認更新</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmUpdateMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="confirmUpdateBtn">確認更新</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl);
+    });
+
+    const form = document.getElementById("submitForm");
+    const dateInput = document.getElementById("date");
+    const warningModal = new bootstrap.Modal(document.getElementById("warning"));
+    const modalBody = document.querySelector("#warning .modal-body");
+    const cpcInput = document.getElementById("cpc");
+    const requiredFields = ["japan", "korea", "hongkong", "singapore", "shanghai", "zhoushan"];
+
+    // **確認更新的 Modal**
+    const confirmUpdateModal = new bootstrap.Modal(document.getElementById("confirmUpdateModal"));
+    const confirmUpdateMessage = document.getElementById("confirmUpdateMessage");
+    const confirmUpdateBtn = document.getElementById("confirmUpdateBtn");
+
+    form.addEventListener("submit", async function (event) {
+        event.preventDefault(); // **先阻止表單提交**
+        const submitButton = event.submitter;
+        const action = submitButton.getAttribute("formaction") || form.action;
+
+        const inputDate = new Date(dateInput.value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        inputDate.setHours(0, 0, 0, 0);
+
+        // **不可新增今日或未來資料**
+        if (inputDate >= today) {
+            showModal("❌ 不可新增今日或未來資料，請重新輸入！");
+            return;
+        }
+
+        const dateValue = dateInput.value.trim();
+        const cpcValue = cpcInput.value.trim();
+        const filledFields = requiredFields.filter(id => document.getElementById(id).value.trim() !== "");
+
+        // **必須輸入 CPC，或日期與至少一個地區的數值**
+        if (!cpcValue && !(dateValue && filledFields.length > 0)) {
+            showModal("❌ 必須輸入日期與至少一個地區的油價或 CPC 油價！");
+            return;
+        }
+
+        const formData = new FormData(form);
+        try {
+            const response = await fetch(action, { method: "POST", body: formData });
+            const contentType = response.headers.get("content-type");
+
+            if (contentType && contentType.includes("application/json")) {
+                const data = await response.json();
+
+                if (data.status === "error") {
+                    showModal(data.message);
+                } else if (data.status === "update_check") {
+                    // **有相同日期的資料，顯示確認更新 Modal**
+                    confirmUpdateMessage.innerHTML = data.message;
+                    confirmUpdateModal.show();
+
+                    // **點擊確認後執行更新**
+                    confirmUpdateBtn.onclick = async function () {
+                        formData.append("confirmUpdate", "true");
+                        const updateResponse = await fetch(action, { method: "POST", body: formData });
+                        const result = await updateResponse.json();
+
+                        if (result.status === "update_success") {
+                            alert(result.message);
+                            window.location.href = result.redirect;
+                        } else {
+                            showModal(result.message);
+                        }
+                    };
+                } else if (data.status === "insert_success") {
+                    // **成功插入新資料，直接跳回首頁**
+                    alert(data.message);
+                    window.location.href = data.redirect;
+                } else {
+                    showModal("❌ 未知的回應格式，請聯繫系統管理員！");
+                }
+            } else {
+                // **如果後端返回 HTML，則讓表單正常提交**
+                form.submit();
+            }
+        } catch (error) {
+            showModal(`❌ 發生錯誤! <br>錯誤訊息：${error.message}`);
+        }
+    });
+
+    function showModal(message) {
+        modalBody.innerHTML = message;
+        warningModal.show();
+    }
+});
+
+</script>
+{% endblock %}

@@ -13,7 +13,7 @@
     text-align: center; /* 標題置中 */
     margin: 0; /* 移除默認外距 */
 }
-.home-icon {
+.home-icon,.settings-icon {
     color: white; /* 圖示顏色 */
     font-size: 1.5rem; /* 圖示大小 */
     text-decoration: none; /* 移除下劃線 */

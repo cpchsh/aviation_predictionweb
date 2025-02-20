@@ -37,6 +37,7 @@
             </div>
             <div class="text-center">
                 <button type="submit" class="btn btn-lg">送出</button>
+                <!-- <button type="submit" class="btn btn-lg btn-secondary" formaction="/tukey_append">新增並預測</button> -->
             </div>
         </fieldset>
     </form>
@@ -46,7 +47,7 @@
 
 
 <!-- 模態框 -->
-<div class="modal fade" id="warning" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<!-- <div class="modal fade" id="warning" aria-labelledby="exampleModalLabel" aria-hidden="true">
     <div class="modal-dialog" id="modalWidth">
         <div class="modal-content">
             <div class="modal-header bg-warning text-dark">
@@ -61,19 +62,143 @@
             </div>
         </div>
     </div>
+</div> -->
+<div class="modal fade" id="warning" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">錯誤訊息</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 錯誤訊息顯示 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+            </div>
+        </div>
+    </div>
 </div>
-
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    document.getElementById('submitForm').addEventListener('submit', function (e) {
-        const dateInput = document.getElementById('date').value;
-        const inputDate = new Date(dateInput);
-        const minDate = new Date('2019-07-06'); // 設定最小日期
 
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("submitForm");
+    const dateInput = document.getElementById("date");
+    const warningModal = new bootstrap.Modal(document.getElementById("warning"));
+    const modalBody = document.querySelector("#warning .modal-body");
+
+    form.addEventListener("submit", async function (event) {
+        const submitButton = event.submitter;
+        const action = submitButton.getAttribute("formaction") || form.action;
+
+        // 1️⃣ **檢查日期**
+        const inputDate = new Date(dateInput.value);
+        const minDate = new Date("2019-07-06");
         if (inputDate < minDate) {
-            e.preventDefault(); // 阻止表單提交
-            const warningModal = new bootstrap.Modal(document.getElementById('warning'));
-            warningModal.show(); 
+            event.preventDefault();
+            showModal("❌ 日期不能小於 2019/07/06，請重新輸入！");
+            return;
+        }
+
+        // 2️⃣ **如果是 /tukey_append，先攔截提交**
+        if (action.includes("/tukey_append")) {
+            event.preventDefault();
+            const hasError = await checkBackendError(action, form);
+            if (!hasError) {
+                form.submit(); // **沒有錯誤時，讓瀏覽器正常提交**
+            }
         }
     });
+
+    async function checkBackendError(action, form) {
+        const formData = new FormData(form);
+
+        try {
+            const response = await fetch(action, { method: "POST", body: formData });
+
+            // **確保回應類型**
+            const contentType = response.headers.get("content-type");
+
+            if (contentType && contentType.includes("application/json")) {
+                const data = await response.json();
+                if (data.status === "error") {
+                    showModal(data.message);
+                    return true;
+                }
+            } else {
+                // **後端返回 HTML，表示成功，讓表單正常提交**
+                return false;
+            }
+        } catch (error) {
+            console.error("❌ 後端請求錯誤:", error);
+            showModal("❌ 伺服器錯誤，請稍後再試！");
+            return true;
+        }
+        return false;
+    }
+
+    function showModal(message) {
+        modalBody.innerHTML = message;
+        warningModal.show();
+    }
+});
+
+
+
+
+
+    // $(document).ready(function () {
+    //     const $form = $("#submitForm");
+    //     const $dateInput = $("#date");
+    //     const $warningModal = $("#warning");
+    //     let submitUrl = "/tukey_append"; // 預設 URL
+
+    //     // 表單提交事件
+    //     $form.submit(function (e) {
+    //         console.log("efwefwe");
+    //         e.preventDefault(); 
+    //         // 日期驗證
+    //         const inputDate = new Date($dateInput.val());
+    //         const minDate = new Date("2019-07-06");
+    //         if (inputDate < minDate) {
+    //             e.preventDefault(); 
+    //             showModal("日期不能小於 2019/07/06，請重新輸入！");
+    //             return;
+    //         }
+    //         if (submitUrl === "/tukey_append") {
+
+    //             // 發送 AJAX 請求
+    //             $.ajax({
+    //                 type: "POST",
+    //                 url: submitUrl,
+    //                 data: $form.serialize(),
+    //                 dataType: "json",
+    //                 success: function (response) {
+    //                     console.log("後端回應:", response);
+    //                     if (response.status === "error") {
+    //                         // e.preventDefault(); 
+    //                         showModal(response.message);
+    //                     } else {
+                            
+    //                         location.reload();
+    //                     }
+    //                 },
+    //                 error: function (xhr) {
+    //                     // e.preventDefault(); 
+                        
+    //                     showModal(errorMsg);
+    //                 }
+    //             });
+    //         }
+    //     });
+
+    //     // 顯示錯誤訊息 Modal
+    //     function showModal(message) {
+    //         $warningModal.find(".modal-body").html(message);
+    //         $warningModal.modal("show");
+    //     }
+    // });
+
 </script>
 {% endblock %}
