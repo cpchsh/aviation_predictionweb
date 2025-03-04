@@ -1,13 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, render_template, flash
+from flask import Blueprint, render_template, request, render_template, jsonify,url_for
 import pandas as pd
 import os
 import time
 import requests
-from datetime import datetime
 import pymssql
-from datetime import date, datetime
+from datetime import date,datetime
 from dotenv import load_dotenv
-
 
 tukey_bp = Blueprint('tukey_bp', __name__)
 
@@ -18,22 +16,101 @@ user = os.getenv("DB_USER")
 password = os.getenv("DB_PASSWORD")
 database = os.getenv("DB_NAME")
 
-def fetch_latest_data(cursor, today):
-    """ 查詢最新兩筆資料 """
-    query = """
-        SELECT TOP 2 日期, 日本, 南韓, 香港, 新加坡, 上海, 舟山, y_lag_1, y_lag_2, y_lag_3, CPC
+def getInput():
+    record = {
+        "日期": request.form.get("date"),
+        "日本": request.form.get("japan"),
+        "南韓": request.form.get("korea"),
+        "香港": request.form.get("hongkong"),
+        "新加坡": request.form.get("singapore"),
+        "上海": request.form.get("shanghai"),
+        "舟山": request.form.get("zhoushan"),
+        "CPC": request.form.get("cpc")
+    }
+    print(record)
+    return record
+
+def update_CPC_ylag(record,latest_data):
+    latest_data = latest_data[0]
+    print(latest_data)
+    if latest_data["CPC"] is None:
+        return {"status": "error", "message": f"❌ 空值錯誤：尚未更新{latest_data["日期"]}的CPC值，請確認！"}
+
+    # 新增 y_lag 欄位
+    record["y_lag_1"] = float(latest_data["CPC"])
+    record["y_lag_2"] = float(latest_data["y_lag_1"])
+    record["y_lag_3"] = float(latest_data["y_lag_2"])
+    return record
+
+def fetch_latest_data(cursor, date, limit=1, condition="<"):
+    """ 查詢最新 N 筆資料，條件可變 """
+    query = f"""
+        SELECT TOP {limit} 日期, 日本, 南韓, 香港, 新加坡, 上海, 舟山, y_lag_1, y_lag_2, y_lag_3, CPC
         FROM aviation_prediction
-        WHERE 日期 < %s
+        WHERE 日期 {condition} %s
         ORDER BY 日期 DESC
     """
-    cursor.execute(query, (today,))
+    cursor.execute(query, (date,))
     return cursor.fetchall()
 
-def update_null_values(cursor, conn, record):
+def insert_or_update(cursor, input_data):
+    """ 檢查資料是否存在，若無則插入，否則更新 """
+    
+    # 將空字串或 0 轉換為 None（SQL 的 NULL）
+    for key in input_data:
+        if input_data[key] == "" or input_data[key] == 0:
+            input_data[key] = None
+
+    query_check = """
+        SELECT COUNT(*) FROM aviation_prediction WHERE 日期 = %s
+    """
+    cursor.execute(query_check, (input_data["日期"],))
+    exists = cursor.fetchone()[0] > 0  # 檢查是否有資料
+
+    if exists:
+        # **動態生成更新 SQL**
+        update_fields = []
+        update_values = []
+        
+        for key, value in input_data.items():
+            if key != "日期" and value is not None:  # 忽略日期，且只更新有輸入的欄位
+                update_fields.append(f"{key} = %s")
+                update_values.append(value)
+
+        if update_fields:
+            query_update = f"""
+                UPDATE aviation_prediction
+                SET {", ".join(update_fields)}
+                WHERE 日期 = %s
+            """
+            update_values.append(input_data["日期"])  # 日期作為 WHERE 條件
+            cursor.execute(query_update, tuple(update_values))
+            print(f"✅ 已更新 {input_data['日期']} 的數據")
+
+    else:
+        # **動態生成插入 SQL**
+        columns = []
+        values_placeholder = []
+        values = []
+
+        for key, value in input_data.items():
+            if value is not None:  # 只插入有輸入的欄位，未輸入的為 NULL
+                columns.append(key)
+                values_placeholder.append("%s")
+                values.append(value)
+
+        query_insert = f"""
+            INSERT INTO aviation_prediction ({", ".join(columns)})
+            VALUES ({", ".join(values_placeholder)})
+        """
+        cursor.execute(query_insert, tuple(values))
+        print(f"✅ 已插入新數據：{input_data['日期']}")
+
+
+def DB_update_null_values(cursor, conn, record):
     """ 更新 `None` 值為該筆資料的平均值 """
     fields = ["日本", "南韓", "香港", "新加坡", "上海", "舟山"]
     null_columns = [col for col in fields if record[col] is None]
-    
     if not null_columns:
         return False  # 無需更新
 
@@ -54,6 +131,27 @@ def update_null_values(cursor, conn, record):
     conn.commit()
     return True  
 
+def update_null_values(record):
+   
+    fields = ["日本", "南韓", "香港", "新加坡", "上海", "舟山"]
+
+    # 轉換空字串為 None，確保能正確篩選空值
+    for key in fields:
+        if record[key] == "":
+            record[key] = None
+
+    # 找出非空值並轉換為 float
+    non_null_values = [float(record[col]) for col in fields if record[col] is not None]
+
+    # 計算平均值
+    avg_value = sum(non_null_values) / len(non_null_values) if non_null_values else 0  # 避免除以 0
+
+    # 填補空值
+    for col in fields:
+        if record[col] is None:
+            record[col] = avg_value  # 確保數值統一為 float
+    return record
+
 def update_ylag(cursor, conn, latest, second_latest):
     """ 更新 `y_lag` 欄位 """
     if not second_latest or all(latest[key] is not None for key in ["y_lag_1", "y_lag_2", "y_lag_3"]):
@@ -67,26 +165,6 @@ def update_ylag(cursor, conn, latest, second_latest):
     cursor.execute(update_query, (second_latest["CPC"], second_latest["y_lag_1"], second_latest["y_lag_2"], latest["日期"]))
     conn.commit()
     return True  
-
-def fetch_latest_prediction_data(cursor, today):
-    """ 查詢最新一筆預測所需的數據 """
-    query = """
-        SELECT TOP 1 日本, 南韓, 香港, 新加坡, 上海, 舟山, y_lag_1, y_lag_2, y_lag_3
-        FROM aviation_prediction
-        WHERE 日期 < %s
-        ORDER BY 日期 DESC
-    """
-    cursor.execute(query, (today,))
-    result = cursor.fetchone()
-    
-    if not result:
-        return None
-    
-    return [{
-        "日本": result["日本"], "南韓": result["南韓"], "香港": result["香港"],
-        "新加坡": result["新加坡"], "上海": result["上海"], "舟山": result["舟山"],
-        "y_lag_1": result["y_lag_1"], "y_lag_2": result["y_lag_2"], "y_lag_3": result["y_lag_3"],
-    }]
 
 def send_api_request(predict_info,api_token):
     """ 發送預測請求並獲取結果 """
@@ -132,7 +210,129 @@ def poll_prediction_result(get_api_path):
             print("⌛ 預測中...")
             time.sleep(3)
 
+def close_connection(conn, cursor):
+    """ 關閉資料庫連線 """
+    try:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    except Exception as e:
+        print(f"⚠️ 關閉連線時發生錯誤: {e}")
 
+"""
+新增/更新資料
+"""
+@tukey_bp.route("/update_form", methods=["GET"])
+def update_form():
+    conn = pymssql.connect(server=server, user=user, password=password, database=database)
+    cursor = conn.cursor(as_dict=True)
+    today = date.today().strftime("%Y-%m-%d")
+    print(today)
+    data=fetch_latest_data(cursor,today)
+    # print(data)
+    # print(data[0])
+    if data[0]['CPC'] is not None:
+        description="更新"
+    else:
+        description="新增"
+    cpcDate=data[0]['日期']
+    return render_template("update_form.html",description=description,cpcDate=cpcDate,price=data[0]['CPC'])
+
+@tukey_bp.route("/update", methods=["POST"])
+def update():
+    conn = pymssql.connect(server=server, user=user, password=password,  database=database)
+    cursor = conn.cursor(as_dict=True)  # 以字典格式獲取結果，方便處理
+
+    today = date.today().strftime("%Y-%m-%d")
+
+    input=getInput()
+    confirmUpdate = request.form.get("confirmUpdate") == "true"
+
+    try:
+        if "CPC" in input and input["CPC"]:
+            print(input["CPC"])
+            latest_data = fetch_latest_data(cursor, today)
+            input["日期"] = latest_data[0]["日期"]
+
+            # **更新最新一筆的 CPC 值**
+            query_update_cpc = """
+                UPDATE aviation_prediction
+                SET CPC = %s
+                WHERE 日期 = %s
+            """
+            cursor.execute(query_update_cpc, (input["CPC"], input["日期"]))
+            conn.commit()  
+            # print(f"✅ 已更新 {input['日期']} 的 CPC 值為 {input['CPC']}")
+            return jsonify({
+                        "status": "insert_success",
+                        "message": f"✅ 已更新 {input['日期']} 的 CPC 值為 {input['CPC']}",
+                        "redirect": url_for("main_bp.index")
+                    })
+            
+        else:
+            checkInput = datetime.strptime(input["日期"], "%Y-%m-%d").date()
+            latest_data = fetch_latest_data(cursor, today)
+            latest_data = latest_data[0]["日期"]
+            
+            if checkInput<latest_data:
+                return jsonify({"status": "error","message": f"❌ 日期不可比{latest_data}還小"}) 
+            else:
+                cursor = conn.cursor()
+                check=fetch_latest_data(cursor,input['日期'],condition='=')
+             
+                if check and not confirmUpdate:
+                    check=check[0]
+                    headers = ["日期", "日本", "南韓", "香港", "新加坡", "上海", "舟山"]
+                    table_html = "<table class='table' style='color: black; font-size: 11pt; '>"
+                    table_html += f"<tr><td class='table-secondary' style='width: 100px; text-align: left; '>{headers[0]}</td><td>{check[0]}</td></tr>"
+                    table_html += f"<tr><td class='table-secondary' style='width: 100px; text-align: left; '>{headers[1]}</td><td>{check[1]}</td></tr>"
+                    table_html += f"<tr><td class='table-secondary' style='width: 100px; text-align: left; '>{headers[2]}</td><td>{check[2]}</td></tr>"
+                    table_html += f"<tr><td class='table-secondary' style='width: 100px; text-align: left; '>{headers[3]}</td><td>{check[3]}</td></tr>"
+                    table_html += f"<tr><td class='table-secondary' style='width: 100px; text-align: left; '>{headers[4]}</td><td>{check[4]}</td></tr>"
+                    table_html += f"<tr><td class='table-secondary' style='width: 100px; text-align: left; '>{headers[5]}</td><td>{check[5]}</td></tr>"
+                    table_html += f"<tr><td class='table-secondary' style='width: 100px; text-align: left; '>{headers[6]}</td><td>{check[6]}</td></tr>"
+                    table_html += "</table>"
+                   
+                    return jsonify({
+                        "status": "update_check",
+                        "message": f"⚠️ {check[0]} 已有資料，是否更新？(僅更新有輸入的欄位)<br><br>{table_html}",
+                        # "redirect": url_for("main_bp.index")
+                    })
+                elif check and confirmUpdate:
+                    insert_or_update(cursor, input)
+                    conn.commit()  
+                    return jsonify({
+                        "status": "update_success",
+                        "message": "✅ 更新成功",
+                        "redirect": url_for("main_bp.index")
+                    })
+                else:
+                    checkCPC=fetch_latest_data(cursor,input['日期'],condition='<')
+                    print(checkCPC)
+                    if checkCPC[0][-1] is not None:
+                        insert_or_update(cursor, input)
+                        conn.commit()  
+                        return jsonify({
+                            "status": "insert_success",
+                            "message": "✅ 插入成功",
+                            "redirect": url_for("main_bp.index")
+                        })
+                    else:
+                        return jsonify({
+                            "status": "error",
+                            "message": f"請先新增 {checkCPC[0][0]} CPC油價",
+                        })
+
+
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ 操作失敗: {e}")
+    finally:
+        close_connection(conn, cursor)
+
+    return render_template("index.html")         
+        
 """
 預測隔日CPC價格(Tukey)
 """
@@ -150,18 +350,19 @@ def predict_next_day_tukey():
         '''
 
         # 1.查詢並更新資料
-        result = fetch_latest_data(cursor, today)
+        result = fetch_latest_data(cursor, today,2)
         if not result:
             print("❌ 找不到符合的資料")
             return None
         else:
-            print('最新兩筆資料',"\n",result[0],"\n",result[1])
+            print('📜 最新兩筆資料:',"\n",today,result[0],"\n",result[1])
 
         latest_record, second_latest = result[0], result[1] if len(result) > 1 else None
-        predicted_results.append(latest_record["日期"])
+        # predicted_results.append(latest_record["日期"])
+        predicted_results.append(today)
 
         # **更新空值**
-        if update_null_values(cursor, conn, latest_record):
+        if DB_update_null_values(cursor, conn, latest_record):
             print("✅ 成功更新空值")
         else:
             print("📌 無需更新空值")
@@ -173,12 +374,16 @@ def predict_next_day_tukey():
             print("📌 無需更新 ylag")
 
         # 2.取得更新後資料進行預測
-        predict_info = fetch_latest_prediction_data(cursor, today)
+        predict_info = fetch_latest_data(cursor, today)
+        for key in ["日期", "CPC"]:
+            predict_info[0].pop(key, None)
+
+       
         if not predict_info:
             print("❌ 無法查詢最新數據")
             return None
         else:
-            print("predict_info",predict_info)
+            print("📜 predict_info",predict_info)
 
         # 3.發送 API 請求並獲取預測結果
         # api_token = "37d9fd65-77d5-464f-8038-3cfee4d525de" #無ylag
@@ -195,9 +400,8 @@ def predict_next_day_tukey():
         return None
 
     finally:
-        cursor.close()
-        conn.close()
-        print("關閉連線...")
+        close_connection(conn, cursor)
+       
 
         
 """
@@ -208,82 +412,40 @@ def tukey_input_form():
     
     return render_template("tukey_form.html")
 
-@tukey_bp.route("/tukey_predict2", methods=["POST"])
+@tukey_bp.route("/tukey_predict", methods=["POST"])
 def tukey_predict_custom():
 
-    # 從表單中提取要預測的資料
-    date=request.form.get("date")
-    japan = request.form.get("japan")
-    korea = request.form.get("korea")
-    hongkong = request.form.get("hongkong")
-    singapore = request.form.get("singapore")
-    shanghai = request.form.get("shanghai")
-    zhoushan = request.form.get("zhoushan")
+    # conn = pymssql.connect(server='REMOVED_INFORMATION', user=r'cpc\REMOVED_NUM', password=r'REMOVED_INFO',  database='BDC_TEST')
+    conn = pymssql.connect(server=server, user=user, password=password,  database=database)
+    cursor = conn.cursor(as_dict=True)  # 以字典格式獲取結果，方便處理
 
-   # 將表單日期轉換為 datetime 格式
-    form_date = datetime.strptime(date, "%Y-%m-%d")
-  
+    input=getInput()
+    latest_data = fetch_latest_data(cursor, input["日期"])   #這邊待確
 
-    # 讀取 CSV 檔案
-    csv_file_path = "processed_data.csv"  # 替換為你的 CSV 路徑
-    df = pd.read_csv(csv_file_path)
+    predict_info=update_null_values(input.copy())  
+    
+    predict_info=update_CPC_ylag(predict_info,latest_data)
 
-    # 確保日期欄位正確轉換為 datetime 格式
-    df['date'] = pd.to_datetime(df['日期'], format="%Y/%m/%d")
-
-    # 移除無效的日期值
-    df = df.dropna(subset=['date'])
-
-    # 過濾日期必須小於表單日期
-    filtered_df = df[df['date'] < form_date]
-
-    if filtered_df.empty:
-        print("沒有找到小於表單日期的資料")
-    else:
-        # 找到與表單日期最近的日期資料
-        nearest_row = filtered_df.iloc[(filtered_df['date'] - form_date).abs().argsort().iloc[0]]
-        print("找到的最近日期資料：")
-        print(nearest_row)
-        nearest_row=nearest_row.tolist()
-       
-    # 將值儲存到字典，便於後續處理
-    inputs = {
-        "日本": float(japan) if japan else None,
-        "南韓": float(korea) if korea else None,
-        "香港": float(hongkong) if hongkong else None,
-        "新加坡": float(singapore) if singapore else None,
-        "上海": float(shanghai) if shanghai else None,
-        "舟山": float(zhoushan) if zhoushan else None,
-        
-    }
-
-    # 計算非空欄位的平均值
-    non_empty_values = [value for value in inputs.values() if value is not None]
-    average_value = sum(non_empty_values) / len(non_empty_values) if non_empty_values else 0
-
-    # 將空值替換為平均值
-    for key, value in inputs.items():
-        if value is None:
-            inputs[key] = average_value
-
-    # 建立預測資訊
-    predict_info = [{
-        **inputs,  # 展開計算後的輸入值
-        "y_lag_1": float(nearest_row[9]),  # 將 float64 轉換為普通的 float
-        "y_lag_2": float(nearest_row[10]), 
-        "y_lag_3": float(nearest_row[11]),
-    }]
+    if isinstance(predict_info, dict) and predict_info.get("status") == "error":    #CPC 欄位為空值
+        return jsonify(predict_info)  
+    
+    print("📜 predict_info",predict_info)
 
     # 發送 API 請求並獲取預測結果
     api_token = "3babb936-d258-44bc-981e-e4c358055ad7"
+    predict_info.pop("日期", None)  # 移除 "日期"
+    predict_info = [predict_info]
 
     get_api_path = send_api_request(predict_info,api_token)
     predicted_value = poll_prediction_result(get_api_path)
 
-    return render_template("tukey_result.html",date=date,
+    #用input顯示值，非predic_info
+    return render_template("tukey_result.html",date=input["日期"],
                 result_val=predicted_value,
-                j=japan,k=korea,h=hongkong,
-                s=singapore,sh=shanghai,zh=zhoushan)  
+                j=input["日本"],k=input["南韓"],h=input["香港"],
+                 s=input["新加坡"],sh=input["上海"],zh=input["舟山"])  
+
+
 
 """
 自訂 Tukey 輸入表單(不含日期)
@@ -295,218 +457,126 @@ def tukey_input_form_noDate():
     """
     return render_template("tukey_form_noDate.html")
 
-@tukey_bp.route("/tukey_predict_noDate2", methods=["POST"])
+@tukey_bp.route("/tukey_predict_noDate", methods=["POST"])
 def tukey_predict_noDate():
+   
+    input=getInput()
+   
+    predict_info=update_null_values(input.copy())  
     
-    # 從表單中提取要預測的資料
-    japan = request.form.get("japan")
-    korea = request.form.get("korea")
-    hongkong = request.form.get("hongkong")
-    singapore = request.form.get("singapore")
-    shanghai = request.form.get("shanghai")
-    zhoushan = request.form.get("zhoushan")
-
-
-    # 讀取 CSV 檔案
-    csv_file_path = "processed_data.csv"  # 替換為你的 CSV 路徑
-    df = pd.read_csv(csv_file_path)
-
-    # 確保日期欄位正確轉換為 datetime 格式
-    df['date'] = pd.to_datetime(df['日期'], format="%Y/%m/%d")
-
-    # 移除無效的日期值
-    df = df.dropna(subset=['date'])
-       
-    # 將值儲存到字典，便於後續處理
-    inputs = {
-        "日本": float(japan) if japan else None,
-        "南韓": float(korea) if korea else None,
-        "香港": float(hongkong) if hongkong else None,
-        "新加坡": float(singapore) if singapore else None,
-        "上海": float(shanghai) if shanghai else None,
-        "舟山": float(zhoushan) if zhoushan else None,
-        
-    }
-
-    # 計算非空欄位的平均值
-    non_empty_values = [value for value in inputs.values() if value is not None]
-    average_value = sum(non_empty_values) / len(non_empty_values) if non_empty_values else 0
-
-    # 將空值替換為平均值
-    for key, value in inputs.items():
-        if value is None:
-            inputs[key] = average_value
-
-    # 建立預測資訊
-    predict_info = [{
-        **inputs,  # 展開計算後的輸入值
-       
-    }]
+    print("📜 predict_info",predict_info)
 
     # 發送 API 請求並獲取預測結果
     api_token = "37d9fd65-77d5-464f-8038-3cfee4d525de"
+
+    predict_info.pop("日期", None)  # 移除 "日期"
+    predict_info = [predict_info]
+
     get_api_path = send_api_request(predict_info,api_token)
     predicted_value = poll_prediction_result(get_api_path)
 
+    #用input顯示值，非predic_info
     return render_template("tukey_result.html",
                 result_val=predicted_value,
-                j=japan,k=korea,h=hongkong,
-                s=singapore,sh=shanghai,zh=zhoushan)
+                j=input["日本"],k=input["南韓"],h=input["香港"],
+                 s=input["新加坡"],sh=input["上海"],zh=input["舟山"])  
 
 
 
-###################### tukey_append ################################
+# """
+# 新增/更新"最新"資料並預測
+# """
 # @tukey_bp.route("/tukey_append", methods=["POST"])
 # def tukey_append():
 
-#     date = request.form.get("date")
-#     japan = float(request.form.get("japan"))  # 假設日本欄位是浮點數
-#     korea = float(request.form.get("korea"))
-#     hongkong = float(request.form.get("hongkong"))
-#     singapore = float(request.form.get("singapore"))
-#     shanghai = float(request.form.get("shanghai"))
-#     zhoushan = float(request.form.get("zhoushan"))
+#     # conn = pymssql.connect(server='REMOVED_INFORMATION', user=r'cpc\REMOVED_NUM', password=r'REMOVED_INFO',  database='BDC_TEST')
+#     conn = pymssql.connect(server=server, user=user, password=password,  database=database)
+#     cursor = conn.cursor(as_dict=True)  # 以字典格式獲取結果，方便處理
+
+#     today = date.today().strftime("%Y-%m-%d")
+
+#     input=getInput()
+#     latest_data = fetch_latest_data(cursor, today)  
+
+#     predict_info=update_null_values(input.copy())
+   
+#     predict_info=update_CPC_ylag(predict_info,latest_data)
+
+#     if isinstance(predict_info, dict) and predict_info.get("status") == "error":
+#         return jsonify(predict_info)
+#     else:
+
+#     # print("predict_info",predict_info)
+
+#         # 發送 API 請求並獲取預測結果
+#         api_token = "3babb936-d258-44bc-981e-e4c358055ad7"
+#         insertData = predict_info.copy()
 
 
-#     # 插入資料的 SQL
-#     query = """
-#         INSERT INTO aviation_prediction (日期, 日本, 南韓, 香港, 新加坡, 上海, 舟山, BRENT_Close, WTI_Close, CPC)
-#         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-#     """
+#         predict_info.pop("日期", None)  # 移除 "日期"
+#         predict_info = [predict_info]
 
-#     try:
-#         conn = pymssql.connect(
-#         server='REMOVED_INFORMATION', user=r'cpc\REMOVED_NUM', password=r'REMOVED_INFO',  database='BDC_TEST'
-#         )
-#         cursor = conn.cursor()
-#         cursor.execute(query, (date, japan, korea, hongkong, singapore, shanghai, zhoushan,600,600,600))
-#         conn.commit()
-#         flash("資料已成功新增到資料庫！", "success")
-#     except Exception as e:
-#         flash(f"新增資料時發生錯誤：{e}", "danger")
-#     finally:
-#         conn.close()
+#         get_api_path = send_api_request(predict_info,api_token)
+#         predicted_value = poll_prediction_result(get_api_path)
 
-#     return render_template("index.html")
+#         # SQL 插入語句
+#         query = """
+#         INSERT INTO aviation_prediction (
+#             日期, 日本, 南韓, 香港, 新加坡, 上海, 舟山, y_lag_1, y_lag_2, y_lag_3
+#         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+#         """
 
+#         # 轉換 predict_info 為 tuple，並確保數據類型正確
+#         values = [
+#             insertData["日期"],
+#             float(insertData["日本"]),
+#             float(insertData["南韓"]),
+#             float(insertData["香港"]),
+#             float(insertData["新加坡"]),
+#             float(insertData["上海"]),
+#             float(insertData["舟山"]),
+#             float(insertData["y_lag_1"]),
+#             float(insertData["y_lag_2"]),
+#             float(insertData["y_lag_3"]),
+#         ]
 
+#         try:
+#             cursor.execute(query, values)
+#             conn.commit()  # 提交變更
+#             print("✅ 資料成功寫入資料庫！")
+            
 
-# @tukey_bp.route("/tukey_append", methods=["POST"])
-# def tukey_append():
-    
-    # date=request.form.get("date")
-    # japan = request.form.get("japan")
-    # korea = request.form.get("korea")
-    # hongkong = request.form.get("hongkong")
-    # singapore = request.form.get("singapore")
-    # shanghai = request.form.get("shanghai")
-    # zhoushan = request.form.get("zhoushan")
+#         except Exception as e:
+#             conn.rollback()
+#             error_msg = str(e)
 
-    # conn = pymssql.connect(server='REMOVED_INFORMATION', user=r'cpc\REMOVED_NUM', password=r'REMOVED_INFO',  database='BDC_TEST')
-    # cursor = conn.cursor(as_dict=True)  # 以字典格式獲取結果，方便處理
+#             if "duplicate" in error_msg.lower() or "primary key" in error_msg.lower():
+#                 return jsonify({
+#                     "status": "error",
+#                     "message": f"❌ 該日期已存在，請使用其他日期！<br> <span style='color: red; '>預測值: {predicted_value}</span>"
+#                 })
+#             else:
+#                 return jsonify({
+#                     "status": "error",
+#                     "message": f"❌ 發生錯誤：{error_msg} <br> <span style='color: red; '>預測值: {predicted_value}</span>"
+#                 })
 
-    # # 查詢最接近的日期的資料
-    # query = """
-    #     SELECT TOP 1 *
-    #     FROM aviation_prediction
-    #     WHERE 日期 < %s  -- 只選擇比輸入日期小的
-    #     ORDER BY 日期 DESC
-    # """
+#         finally:
+#             try:
+#                 if 'cursor' in locals() and cursor:
+#                     cursor.close()
+#                 if 'conn' in locals() and conn:
+#                     conn.close()
+#             except Exception as e:
+#                 print(f"⚠️ 關閉連線時發生錯誤: {e}")
 
-    # try:
-    #     cursor.execute(query, (date,))
-    #     result = cursor.fetchone()  # 取得最接近的那筆資料
-    #     if result:
-    #         print("最近的資料:", result)
-    #     else:
-    #         print("找不到符合的資料")
-
-    # except Exception as e:
-    #     print(f"查詢時發生錯誤: {e}")
-
-    # finally:
-    #     cursor.close()
-    #     conn.close()
-
-    # inputs = {
-    #     "日本": float(japan) if japan else None,
-    #     "南韓": float(korea) if korea else None,
-    #     "香港": float(hongkong) if hongkong else None,
-    #     "新加坡": float(singapore) if singapore else None,
-    #     "上海": float(shanghai) if shanghai else None,
-    #     "舟山": float(zhoushan) if zhoushan else None,
-        
-    # }
-
-    # # 計算非空欄位的平均值
-    # non_empty_values = [value for value in inputs.values() if value is not None]
-    # average_value = sum(non_empty_values) / len(non_empty_values) if non_empty_values else 0
-
-    # # 將空值替換為平均值
-    # for key, value in inputs.items():
-    #     if value is None:
-    #         inputs[key] = average_value
-
-    # # 建立預測資訊
-    # predict_info = [{
-    #     "日期": date,
-    #     **inputs,  
-    #     # "BRENT_Close":BRENT_Close,
-    #     # "WTI_Close":WTI_Close,
-    #     # "DUBAI_Close":DUBAI_Close,
-    #     "y_lag_1": float(result['CPC']),  # 將 float64 轉換為普通的 float
-    #     "y_lag_2": float(result['y_lag_1']), 
-    #     "y_lag_3": float(result['y_lag_2']),
-    # }]
-    # print("predict_info",predict_info)
+#     #用input顯示值，非predic_info
+#     return render_template("tukey_result.html",date=input["日期"],
+#                 result_val=predicted_value,
+#                 j=input["日本"],k=input["南韓"],h=input["香港"],
+#                 s=input["新加坡"],sh=input["上海"],zh=input["舟山"])  
 
 
 
-
-    # # 連接資料庫
-    # # conn = pymssql.connect(
-    # #     server='你的SQLServer伺服器',
-    # #     user='你的帳號',
-    # #     password='你的密碼',
-    # #     database='你的資料庫'
-    # # )
-    # conn = pymssql.connect(server='REMOVED_INFORMATION', user=r'cpc\REMOVED_NUM', password=r'REMOVED_INFO',  database='BDC_TEST')
-    # cursor = conn.cursor()
-
-    # # 取得 predict_info 第一筆資料
-    # data = predict_info[0]
-
-    # # SQL 插入語句
-    # query = """
-    #     INSERT INTO aviation_prediction (
-    #         日期, 日本, 南韓, 香港, 新加坡, 上海, 舟山, y_lag_1, y_lag_2, y_lag_3
-    #     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    # """
-
-    # # 轉換日期格式（確保是字串）
-    # # if isinstance(data["日期"], datetime):
-    # #     data["日期"] = data["日期"].strftime("%Y-%m-%d")
-
-    # # 執行 SQL 插入
-    # try:
-    #     cursor.execute(query, (
-    #         data["日期"], 
-    #         data["日本"], data["南韓"], data["香港"], 
-    #         data["新加坡"], data["上海"], data["舟山"],
-    #         data["y_lag_1"], data["y_lag_2"], data["y_lag_3"]
-    #     ))
-
-    #     conn.commit()  # 提交更改
-    #     print("✅ 資料成功寫入資料庫！")
-
-    # except Exception as e:
-    #     print(f"❌ 插入資料時發生錯誤：{e}")
-    #     conn.rollback()  # 取消更改（如果有錯誤）
-
-    # finally:
-    #     cursor.close()
-    #     conn.close()  # 關閉連線
-
- 
 
 

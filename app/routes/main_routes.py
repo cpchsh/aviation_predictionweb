@@ -14,7 +14,7 @@ main_bp = Blueprint('main_bp', __name__)
 def index():
   
     # Tukey 預測
-    #next_day_tukey = predict_next_day_tukey()
+    next_day_tukey = predict_next_day_tukey()
     # 1) 用 XGB 預測下一天
     latest_date, next_day_pred = predict_next_day_xgb_db()
     next_day_pred_str = f"{next_day_pred:.2f}"
@@ -70,8 +70,8 @@ def index():
     return render_template(
         "index.html",
         next_day=latest_date,
-       #    next_day2=next_day_tukey[0],
-       #tukey_pred=next_day_tukey[1],
+        next_day2=next_day_tukey[0],
+        tukey_pred=next_day_tukey[1],
         xgb_pred=next_day_pred_str,
         # prophet_fvalue=f_value,
         # future_table_html=future_table_html,
