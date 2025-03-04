@@ -1,6 +1,5 @@
 # app/routes/main_routes.py
 from flask import Blueprint, render_template, request
-import os
 import pandas as pd
 
 from app.routes.xgb_routes import predict_next_day_xgb_db

@@ -18,7 +18,7 @@ database = os.getenv("DB_NAME")
 
 
 # 載入 XGBoost 模型 (全域)
-xgb_model_path = "./xgb_model_new.pkl"
+xgb_model_path = "./xgb_model_processed0304.pkl"
 xgb_model = joblib.load(xgb_model_path)
 
 def update_ylag_for_latest(cursor, conn, latest_date):
