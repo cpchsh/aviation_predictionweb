@@ -1,13 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}XGB 自訂輸入{% endblock %}
+{% block title %}Xgb 自訂輸入{% endblock %}
 
 {% block content %}
 <div class="container">
-    <form action="/xgb_predict" method="POST" class="card p-4" style="border: none;" id="submitForm"> 
+    <form action="/xgb_predict_db_form" method="POST" class="card p-4" style="border: none;" id="submitForm"> 
         <fieldset>
             <legend style="font-weight: bold;">XGB 自訂輸入</legend>
-           
+            <div class="mb-3">
+                <label for="date" class="form-label">日期:</label>
+                <input type="date" id="date" name="date" class="form-control"  value="{{ db_max_date }}"     required>
+            </div>
             <div class="mb-3">
                 <label for="japan" class="form-label">日本:</label>
                 <input type="number" id="japan" name="japan" class="form-control" value="567" step="any" min="1">
@@ -40,4 +43,64 @@
 
 </div>
 
+
+
+<!-- 模態框 -->
+<div class="modal fade" id="warning" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog" id="modalWidth">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="exampleModalLabel">錯誤訊息</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modalMessage">
+                <!--內容透過JavaScript動態修改-->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showWarningModal(message, title="錯誤訊息") {
+        document.getElementById('exampleModalLabel').textContent = title; //設定標題
+        document.getElementById('modalMessage').textContent = message; // 設定內容
+        const warningModal = new bootstrap.Modal(document.getElementById('warning'));
+        warningModal.show();
+    }
+    document.getElementById('submitForm').addEventListener('submit', async function (e) {
+        e.preventDefault(); // 先暫停提交
+        const dateInput = document.getElementById('date').value;
+        const inputDate = new Date(dateInput);
+        const minDate = new Date('2019-07-06'); // 設定最小日期
+
+        // 1) 先檢查最小日期
+        if (inputDate < minDate) {
+            showWarningModal("日期不能小於 2019/07/06，請重新輸入!");
+            return; //阻止後續送出
+        }
+
+        // 2) AJAX 檢查 前一天 is_final_cpc
+        try {
+            const resp = await fetch(`/api/check_previous_final?date=${dateInput}`);
+            const result = await resp.json();
+            console.log("check_previous_final => ", result);
+
+            if (result.hasRecord) {
+                // 找到上一筆 => 檢查 isFinal
+                if (result.isFinal === false) {
+                    showWarningModal(`請先決策前一日(${result.date})的CPC，再進行此預測!`)
+                    return;
+                }
+            }
+            // 3) 都通過 => 真的提交表單
+            this.submit();
+        } catch(err) {
+            console.error("AJAX check error:", err);
+            alert("發生錯誤，請稍後再試");
+        }
+    });
+</script>
 {% endblock %}
