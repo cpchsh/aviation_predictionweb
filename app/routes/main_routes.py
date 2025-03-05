@@ -4,7 +4,7 @@ import pandas as pd
 
 from app.routes.xgb_routes import predict_next_day_xgb_db
 from app.routes.tukey_routes import predict_next_day_tukey
-from app.services.db_service import get_recent_7_records
+from app.services.db_service import get_recent_7_records, get_error_metrics
 # 建立 Blueprint 物件
 main_bp = Blueprint('main_bp', __name__)
 
@@ -65,6 +65,17 @@ def index():
         final_cpc = rows[0]['is_final_cpc']
     else:
         df_html = "<p>查無資料</p>"
+
+    # 計算 MAE, MAPE
+    mae, mape = get_error_metrics()
+    # 若都計不到就給None
+    if mae is None or mape is None:
+        mae_display = "N/A"
+        mape_display = "N/A"
+    else:
+        mae_display = round(mae, 4)
+        mape_display = round(mape, 2)
+
     
     return render_template(
         "index.html",
@@ -76,7 +87,9 @@ def index():
         # future_table_html=future_table_html,
         table_html=df_html,
         final_cpc = final_cpc,
-        filter_date=filter_date  # 讓前端可回填
+        filter_date=filter_date,  # 讓前端可回填
+        mae=mae_display,
+        mape=mape_display
         # plot_full_url=plot_full_url,
         # plot_recent_url=plot_recent_url
     )

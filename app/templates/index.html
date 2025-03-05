@@ -26,7 +26,7 @@
 
   <div class="card mb-4">
     <div class="card-body">
-      <h2 class="card-title">今天 ({{ next_day }}) 價格預測 (XGB Regressor)</h2>
+      <h2 class="card-title">資料庫最新日 ({{ next_day }}) 價格預測 (XGB Regressor)</h2>
       <p class="card-text text-danger fs-5">
         預測值: <b>{{ xgb_pred }}</b>
       </p>
@@ -39,6 +39,11 @@
       {% else %}
         <span class="text-primary fs-5">已決策</span>
       {% endif %}
+      <p> 目前統計:
+        <br>MAE=<b>{{ mae }}</b>
+        <br>MAPE=<b>{{ mape }}%</b>
+
+      </p>
       
     </div>
   </div>
