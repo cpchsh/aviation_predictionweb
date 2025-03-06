@@ -99,3 +99,26 @@ def get_error_metrics():
     finally:
         cursor.close()
         conn.close()
+
+def save_error_metrics_to_db(mae, mape):
+    """
+    將 mae, mape 寫入資料表 oooiiilll_metrics
+      欄位: timestamp(datetime), MAE(float), MAPE(float)
+    使用 GETDATE() 取得資料庫當下時間
+    """
+    conn = pymssql.connect(server=DB_SERVER, user=DB_USER,
+                           password=DB_PASSWORD, database=DB_NAME)
+    cursor = conn.cursor()
+    try:
+        sql = """
+          INSERT INTO oooiiilll_metrics ([timestamp], [MAE], [MAPE])
+          VALUES (GETDATE(), %s, %s)
+        """
+        cursor.execute(sql, (mae, mape))
+        conn.commit()
+        print(f"[INFO] 已插入 oooiiilll_metrics: MAE={mae}, MAPE={mape}")
+    except Exception as e:
+        print("save_error_metrics_to_db 錯誤:", e)
+    finally:
+        cursor.close()
+        conn.close()

@@ -6,6 +6,7 @@ import pymssql
 import joblib
 from datetime import date, datetime
 from dotenv import load_dotenv
+from app.services.db_service import get_error_metrics, save_error_metrics_to_db
 
 xgb_bp = Blueprint('xgb_bp', __name__)
 
@@ -255,6 +256,11 @@ def update_cpc():
 
         # 更新連續3天的 y_lag_1, y_lag_2, y_lag_3
         update_next_3_lags(cursor, conn, cpc_date, cpc_val)
+        # 計算 MAE / MAPE => 寫入 metrics
+        mae, mape = get_error_metrics()
+        if mae is not None and mape is not None:
+            save_error_metrics_to_db(mae, mape)
+            print(f"[INFO] Inserted metrics: MAE={mae}, MAPE={mape}")
         return redirect("/")
     except Exception as e:
         print("update_cpc 錯誤", e)
@@ -430,7 +436,7 @@ def xgb_predict_db_form():
             return "找不到較早的歷史紀錄，無法做lag或預測"
         
 
-        #3) 建立特徵X
+        #D) 建立特徵X
         X = pd.DataFrame([{
             "japan": japan,
             "korea": korea,
@@ -444,12 +450,12 @@ def xgb_predict_db_form():
         }])
         print("[DEBUG] X", X)
 
-        # D) 執行 XGB 預測
+        # E) 執行 XGB 預測
         pred_val = xgb_model.predict(X)[0]
         pred_rounded = round(float(pred_val), 2)
         print(f"[DEBUG] 預測結果 = {pred_rounded}")
 
-        # E) 寫回 (form_date) 的 PredictedCPC, CPC
+        # F) 寫回 (form_date) 的 PredictedCPC, CPC
         cursor.execute("SELECT TOP 1 * FROM oooiiilll WHERE 日期 = %s", (form_date,))
         new_row = cursor.fetchone()
 
@@ -473,7 +479,9 @@ def xgb_predict_db_form():
             conn.commit()
             print(f"已插入新日期{form_date}, CPC= {pred_rounded}")
 
-        # (F) 回傳至 xgb_result.html
+        
+
+        # G) 回傳至 xgb_result.html
         return render_template(
             "xgb_result.html",
             result_val=pred_rounded,
