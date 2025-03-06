@@ -67,14 +67,16 @@ def index():
         df_html = "<p>查無資料</p>"
 
     # 計算 MAE, MAPE
-    mae, mape = get_error_metrics()
+    mae, mape, rmse = get_error_metrics()
     # 若都計不到就給None
-    if mae is None or mape is None:
+    if mae is None or mape is None or rmse is None:
         mae_display = "N/A"
         mape_display = "N/A"
+        rmse_display = "N/A"
     else:
         mae_display = round(mae, 4)
         mape_display = round(mape, 2)
+        rmse_display = round(rmse, 4)
 
     
     return render_template(
@@ -89,7 +91,8 @@ def index():
         final_cpc = final_cpc,
         filter_date=filter_date,  # 讓前端可回填
         mae=mae_display,
-        mape=mape_display
+        mape=mape_display,
+        rmse=rmse_display
         # plot_full_url=plot_full_url,
         # plot_recent_url=plot_recent_url
     )

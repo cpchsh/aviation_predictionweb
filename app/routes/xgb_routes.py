@@ -257,10 +257,10 @@ def update_cpc():
         # 更新連續3天的 y_lag_1, y_lag_2, y_lag_3
         update_next_3_lags(cursor, conn, cpc_date, cpc_val)
         # 計算 MAE / MAPE => 寫入 metrics
-        mae, mape = get_error_metrics()
-        if mae is not None and mape is not None:
-            save_error_metrics_to_db(mae, mape)
-            print(f"[INFO] Inserted metrics: MAE={mae}, MAPE={mape}")
+        mae, mape, rmse = get_error_metrics()
+        if mae is not None and mape is not None and rmse is not None:
+            save_error_metrics_to_db(mae, mape, rmse)
+            print(f"[INFO] Inserted metrics: MAE={mae}, MAPE={mape}, RMSE={rmse}")
         return redirect("/")
     except Exception as e:
         print("update_cpc 錯誤", e)
