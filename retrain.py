@@ -1,11 +1,12 @@
 import os
 import datetime
 import pandas as pd
-import numpy as np
 from xgboost import XGBRegressor
 from joblib import dump
 import pymssql
 from dotenv import load_dotenv
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 def train_model():
     # 載入 .env 檔案中的環境變數
@@ -20,7 +21,7 @@ def train_model():
     cursor = conn.cursor(as_dict=True)
 
     try:
-        # 撈取資料，範例中只撈 is_final_cpc=1 的資料
+        # 根據實際需求撈取資料，範例中假設只撈 is_final_cpc=1 的資料
         query = """
             SELECT
                 [日期] as dt,
@@ -46,7 +47,8 @@ def train_model():
         # 將查詢結果轉為 DataFrame
         data = pd.DataFrame(rows)
 
-        # 重新命名欄位
+        # 若資料表欄位跟以上 SELECT 不完全相同，請自行調整欄位對應
+        # 先將原始欄位重新命名
         data.rename(columns={
             'dt': 'ds',
             'CPC': 'y',
@@ -69,35 +71,32 @@ def train_model():
             'y_lag_1', 'y_lag_2', 'y_lag_3'
         ]
         X = data[feature_cols]
-        y = data['y']
+        y = data['y']  # 這裡假設 CPC 為要預測的目標
 
-        # 手動切分訓練集與測試集 (8:2)，因為 shuffle=False，直接依照 index 分割
-        split_index = int(0.8 * len(data))
-        X_train = X.iloc[:split_index]
-        X_test = X.iloc[split_index:]
-        y_train = y.iloc[:split_index]
-        y_test = y.iloc[split_index:]
+        # 切分訓練集、測試集 (範例: 8:2)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
 
         # 建立並訓練 XGBoost 迴歸模型
         model = XGBRegressor(n_estimators=100, learning_rate=0.1, random_state=42)
         model.fit(X_train, y_train)
 
-        # 預測結果
+        # 計算誤差指標 (RMSE, MAE)
         y_pred_train = model.predict(X_train)
         y_pred_test = model.predict(X_test)
 
-        # 計算誤差指標：RMSE 與 MAE (利用 numpy)
-        rmse_train = np.sqrt(np.mean((y_train - y_pred_train) ** 2))
-        rmse_test = np.sqrt(np.mean((y_test - y_pred_test) ** 2))
-        mae_test = np.mean(np.abs(y_test - y_pred_test))
+        rmse_train = mean_squared_error(y_train, y_pred_train, squared=False)
+        rmse_test = mean_squared_error(y_test, y_pred_test, squared=False)
+        mae_test = mean_absolute_error(y_test, y_pred_test)
 
-        # 使用固定檔名來覆蓋原有模型檔
-        model_filename = "/shared_volume/xgb_model.pkl"
+        # 以時間戳記作為檔名的一部份，方便管理多個版本的模型
+        now_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        model_filename = f"/shared_volume/xgb_model.pkl"
+
+        # 輸出模型檔
         dump(model, model_filename)
         print(f"新模型已儲存：{model_filename}")
 
-        # 產生一段文字紀錄 (包含指標與訓練時間)
-        now_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        # 產生一段文字紀錄
         log_text = (
             f"[{now_str}] Model Retrained\n"
             f"  Train RMSE: {rmse_train:.2f}\n"
@@ -106,7 +105,8 @@ def train_model():
             "----------------------------------------\n"
         )
 
-        # 寫入或追加到 log 檔案
+        # 寫入 (或追加) 到 log 檔案
+        # 如果只想保留最新紀錄，可用 "w" 覆蓋
         log_filename = "/shared_volume/training_log.txt"
         with open(log_filename, "a", encoding="utf-8") as f:
             f.write(log_text)
