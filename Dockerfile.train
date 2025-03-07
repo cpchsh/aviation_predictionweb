@@ -2,10 +2,11 @@
 FROM python:3.12-slim
 WORKDIR /app
 
-# 更新 apt 並安裝必要的編譯工具及函式庫
+# 更新 apt 並安裝必要的編譯工具與函式庫，包括 python3-distutils
 RUN apt-get update && apt-get install -y \
     build-essential \
     python3-dev \
+    python3-distutils \
     libatlas-base-dev \
     gfortran
 
