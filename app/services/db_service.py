@@ -11,7 +11,7 @@ DB_USER     = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_NAME     = os.getenv("DB_NAME")
 
-xgb_model_path = "./xgb_model_processed0304.pkl"
+xgb_model_path = "./xgb_models/xgb_model.pkl"
 xgb_model = joblib.load(xgb_model_path)
 
 def get_recent_7_records(filter_date=None):
