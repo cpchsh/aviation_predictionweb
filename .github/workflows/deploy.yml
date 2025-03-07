@@ -37,7 +37,7 @@ jobs:
       - name: Sync Latest Code to Remote Directory
         run: |
           mkdir -p ~/aviation_predictionweb
-          rsync -av --delete --exclude '*.csv' --exclude '*.sh' "$GITHUB_WORKSPACE"/ ~/aviation_predictionweb/
+          rsync -av --delete --exclude '*.csv' --exclude '.env' --exclude '*.sh' "$GITHUB_WORKSPACE"/ ~/aviation_predictionweb/
 
       # 4. 建立 Docker 映像檔
       - name: Build Docker Image
