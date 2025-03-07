@@ -101,7 +101,9 @@ def get_latest_log_time():
     讀取 /xgb_models/training_log.txt 中最新一筆的 log 時間，
     轉換為本地時間 (UTC+8)，格式化為 "YYYY-MM-DD HH:MM"，並以 JSON 回傳。
     """
-    log_file_path = "./xgb_models/training_log.txt"  # 調整此路徑，確保與容器內掛載的路徑一致
+    #本地測試用
+    #log_file_path = "./xgb_models/training_log.txt"  
+    log_file_path = "/shared_volume/training_log.txt"# 調整此路徑，確保與容器內掛載的路徑一致
     try:
         with open(log_file_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
