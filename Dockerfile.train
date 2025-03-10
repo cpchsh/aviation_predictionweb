@@ -1,0 +1,23 @@
+FROM python:3.10-slim
+WORKDIR /app
+
+# 更新 apt 並安裝編譯工具與必要庫
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3-dev \
+    python3-distutils \
+    libatlas-base-dev \
+    gfortran
+
+# 升級 pip、setuptools 與 wheel
+RUN pip install --upgrade pip setuptools wheel
+
+# 複製 requirements 檔案並安裝
+COPY requirements_retrain.txt ./
+RUN pip install --no-cache-dir -r requirements_retrain.txt
+
+# 複製專案檔案
+COPY . .
+
+# 執行 retrain.py
+CMD ["python", "retrain.py"]

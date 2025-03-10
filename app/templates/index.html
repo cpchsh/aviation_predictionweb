@@ -11,14 +11,12 @@
 
 <div class="container my-4">
   <!-- XGB 預測結果 -->
-
   <div class="card mb-4">
     <div class="card-body">
       <h2 class="card-title">
         今天 ({{ next_day2 }}) 價格預測 (Tukey)
       </h2>
       <p class="card-text text-danger fs-5">預測值: <b>{{ tukey_pred }}</b></p>
-      <!-- <p class="card-text text-danger fs-5">預測值: <b style="display: none;">{{ tukey_pred }}</b></p> -->
       <a href="/tukey_form" class="btn">自訂輸入</a>
       <a href="/tukey_form_noDate" class="btn">自訂輸入(不含日期)</a>
     </div>
@@ -26,20 +24,23 @@
 
   <div class="card mb-4">
     <div class="card-body">
-      <h2 class="card-title">今天 ({{ next_day }}) 價格預測 (XGB Regressor)</h2>
+      <h2 class="card-title">資料庫最新日 ({{ next_day }}) 價格預測 (XGB Regressor)</h2>
       <p class="card-text text-danger fs-5">
         預測值: <b>{{ xgb_pred }}</b>
       </p>
       <a href="/xgb_form" class="btn">自訂 XGB 輸入</a>
       <a href="/update_cpc_form" class="btn">更新 CPC 值</a>
 
-      <!-- 判斷 is_final_cpc 的第一列值來顯示狀態 -->
       {% if final_cpc == False %}
         <span class="text-danger fs-5">尚未決策</span>
       {% else %}
         <span class="text-primary fs-5">已決策</span>
       {% endif %}
-      
+      <p> 目前統計:
+        <br>RMSE=<b>{{ rmse }}</b>
+        <br>MAPE=<b>{{ mape }}%</b>
+        <br>模型已於<span id="reTrainTimeDisplay">讀取中...</span>重新訓練</b>
+      </p>
     </div>
   </div>
 
@@ -58,19 +59,16 @@
     console.log("table_html:", `{{ table_html | safe }}`);
   </script>
 
-
   <!-- Prophet Plot A - 全歷史圖 + 篩選器 -->
   <div class="row mb-4">
     <div class="col-md-6">
       <h3>全歷史圖（可篩日期）</h3>
-
       <!-- 篩選器表單 -->
       <div class="mb-2">
         <label>開始日期: <input type="date" id="startDateInput" /></label>
         <label>結束日期: <input type="date" id="endDateInput" /></label>
         <button id="applyFilterBtn" class="btn btn-sm btn-primary">套用篩選</button>
       </div>
-
       <canvas id="prophetChart" width="500" height="400"></canvas>
     </div>
 
@@ -78,12 +76,19 @@
       <h3>預測決策比較</h3>
       <canvas id="recentFutureChart" width="500" height="400"></canvas>
     </div>
-  </div>
 
-  <!-- 其餘區塊： XGB 預測值, Prophet 預測表格, 按鈕... -->
-  <!-- <div class="text-center">
-    <button id="appendAndTrainBtn" class="btn btn-lg">更新和重訓資料</button>
-  </div> -->
+    <!-- 新增「歷史RMSE」圖表 -->
+    <div class="col-md-6">
+      <h3>歷史RMSE</h3>
+      <canvas id="historicalRmseChart" width="500" height="400"></canvas>
+    </div>
+
+    <!-- 新增「歷史MAPE」圖表 -->
+    <div class="col-md-6">
+      <h3>歷史MAPE</h3>
+      <canvas id="historicalMapeChart" width="500" height="400"></canvas>
+    </div>
+  </div>
 </div>
 
 <!-- jQuery + Chart.js + date-fns -->
@@ -92,239 +97,327 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 
 <script>
-// 全域變數，儲存所有「全歷史」資料
-let rawHistData = [];
-// let rawForecastData = [];
-let chartA = null;  // Plot A 的 Chart 實例
+  // 全域變數，儲存所有「全歷史」資料
+  let rawHistData = [];
+  let chartA = null;  // Plot A 的 Chart 實例
 
-document.addEventListener("DOMContentLoaded", () => {
-  // 1) 取得 /api/historical_data
-  fetch("/api/historical_data")
-  .then(r=>r.json())
-  .then(histData => {
-    console.log("Historical data:", histData);
+  document.addEventListener("DOMContentLoaded", () => {
+    // 1) 取得 /api/historical_data
+    fetch("/api/historical_data")
+      .then(r => r.json())
+      .then(histData => {
+        console.log("Historical data:", histData);
 
-    // 全域存起來
-    window.rawHistData = histData;
+        // 全域存起來
+        window.rawHistData = histData;
 
-    // 初始化畫圖(不篩選 => 全部)
-    initProphetChartA(histData);
+        // 初始化畫圖(不篩選 => 全部)
+        initProphetChartA(histData);
 
-    // 畫 Plot B
-    initProphetChartB(histData);
+        // 畫 Plot B (預測決策比較)
+        initProphetChartB(histData);
+      })
+      .catch(err => {
+        console.error("Error fetch hist/forecast:", err);
+      });
 
-  })
-  .catch(err=> {
-    console.error("Error fetch hist/forecast:", err);
-  });
+    // 2) 取得 /api/metrics_data (歷史 RMSE, MAPE)
+    fetch("/api/metrics_data")
+      .then(r => r.json())
+      .then(metricsData => {
+        console.log("metricsData:", metricsData);
+        initRmseChart(metricsData);
+        initMapeChart(metricsData);
+      })
+      .catch(err => {
+        console.error("Error fetch metricsData:", err);
+      });
 
-  // // 2) recent + future (Plot B)
-  // fetch("/api/prophet_recent_future")
-  //   .then(res=>res.json())
-  //   .then(data => {
-  //     console.log("recent_future data:", data);
-  //     initProphetChartB(data);
-  //   })
-  //   .catch(err=> {
-  //     console.error("Error fetch /api/prophet_recent_future", err);
-  //   });
+    // 3) 取得 模型最新重新訓練時間
+    fetch("/api/latest_log_time")
+      .then(r => r.json())
+      .then(data => {
+        console.log("reTrainTime", data);
+        document.getElementById("reTrainTimeDisplay").innerText = data.latest_log_time || "未知";
+      })
+      .catch(err => {
+        console.error("Error fetch reTrainTime:", err);
+        document.getElementById("reTrainTimeDisplay").innerText = "錯誤";
+      })
 
-  // 3) 「套用篩選」按鈕
-  const applyBtn = document.getElementById("applyFilterBtn");
-  applyBtn.addEventListener("click", () => {
-    // 讀取 start/end date
-    const startDateStr = (document.getElementById("startDateInput").value || "").trim();
-    const endDateStr   = (document.getElementById("endDateInput").value || "").trim();
+    // 4) 「套用篩選」按鈕
+    const applyBtn = document.getElementById("applyFilterBtn");
+    applyBtn.addEventListener("click", () => {
+      const startDateStr = (document.getElementById("startDateInput").value || "").trim();
+      const endDateStr   = (document.getElementById("endDateInput").value || "").trim();
 
-    if(!startDateStr || !endDateStr){
-      alert("請選擇 開始日期、結束日期");
-      return;
-    }
-
-    const startDate = new Date(startDateStr);
-    const endDate   = new Date(endDateStr);
-    if(startDate > endDate){
-      alert("開始日期 不可大於 結束日期");
-      return;
-    }
-
-    // 過濾
-    updateChartAWithRange(startDate, endDate);
-  });
-
-  // Append & Train
-  $("#appendAndTrainBtn").on("click", function(){
-    $("#loading").show();
-    $(this).prop("disabled",true);
-    $.ajax({
-      url:"/append_and_train",
-      type:"POST",
-      success:function(resp){
-        $("#loading").hide();
-        $("#appendAndTrainBtn").prop("disabled",false);
-        alert(resp.message);
-        location.reload();
-      },
-      error:function(){
-        $("#loading").hide();
-        $("#appendAndTrainBtn").prop("disabled",false);
-        alert("An error occurred while processing.");
+      if(!startDateStr || !endDateStr){
+        alert("請選擇 開始日期、結束日期");
+        return;
       }
-    })
-  });
-});
-
-// ---------------------
-// Plot A init
-function initProphetChartA(histData){
-  // 1) 排序歷史資料的日期
-  const sortedDates = histData.map(d => d.ds).sort((a, b)=> new Date(a) - new Date(b));
-
-
-  // 2) dataset
-  const histScatter = {
-    label: "實際值(散點)",
-    data: histData.map(d => ({ x: d.ds, y: d.y })),
-    showLine:false,
-    pointRadius:1,
-    borderColor:"black",
-    backgroundColor:"black"
-  };
-
-  const ctxA = document.getElementById("prophetChart").getContext("2d");
-  const chartData = {
-    labels: sortedDates,
-    datasets:[histScatter]//, lowerLine, upperLine, yhatLine]
-  };
-  const options = {
-    responsive:true,
-    //parsing:false,
-    scales:{
-      x:{
-        type:"time",
-        time:{ parser:"yyyy-MM-dd", unit:"day", displayFormats:{day:"yyyy-MM-dd"}},
-        title:{ display:true, text:"Date"}
-      },
-      y:{
-        title:{ display:true, text:"CPC 價格"}
+      const startDate = new Date(startDateStr);
+      const endDate   = new Date(endDateStr);
+      if(startDate > endDate){
+        alert("開始日期 不可大於 結束日期");
+        return;
       }
-    },
-    plugins:{
-      legend:{ display:true},
-      title:{ display:false}
-    }
-  };
-  window.chartA = new Chart(ctxA, {
-    type:"line",
-    data: chartData,
-    options: options
+      // 過濾
+      updateChartAWithRange(startDate, endDate);
+    });
+
+    // Append & Train
+    $("#appendAndTrainBtn").on("click", function(){
+      $("#loading").show();
+      $(this).prop("disabled", true);
+      $.ajax({
+        url: "/append_and_train",
+        type: "POST",
+        success: function(resp){
+          $("#loading").hide();
+          $("#appendAndTrainBtn").prop("disabled", false);
+          alert(resp.message);
+          location.reload();
+        },
+        error: function(){
+          $("#loading").hide();
+          $("#appendAndTrainBtn").prop("disabled", false);
+          alert("An error occurred while processing.");
+        }
+      })
+    });
   });
-}
 
-// ---------------------
-// 當使用者選了 startDate ~ endDate 後, 過濾並更新 chartA
-function updateChartAWithRange(startDate, endDate){
-  if(!window.chartA) return;
+  // ---------------------
+  // Plot A init (全歷史圖)
+  function initProphetChartA(histData){
+    // 1) 依日期排序
+    const sortedDates = histData.map(d => d.ds).sort((a, b) => new Date(a) - new Date(b));
 
-  // 過濾 rawHistData、rawForecastData
-  const filteredHist = window.rawHistData.filter(d=>{
-    const dtime = new Date(d.ds);
-    return dtime >= startDate && dtime <= endDate;
-  });
+    // 2) dataset
+    const histScatter = {
+      label: "實際值(散點)",
+      data: histData.map(d => ({ x: d.ds, y: d.y })),
+      showLine: false,
+      pointRadius: 1,
+      borderColor: "black",
+      backgroundColor: "black"
+    };
 
-  const sortedDates = filteredHist.map(d => d.ds).sort((a, b) => new Date(a) - new Date(b));
-
-  // 2) dataset
-  const histScatter = {
-    label: "實際值(散點)",
-    data: filteredHist.map(d => ({ x: d.ds, y: d.y })),
-    showLine:false,
-    pointRadius:1,
-    borderColor:"black",
-    backgroundColor:"black"
-  };
-
-
-  // update chart
-  window.chartA.data.labels = sortedDates;
-  window.chartA.data.datasets = [histScatter]//, lowerLine, upperLine, yhatLine];
-  window.chartA.update();
-}
-
-// ---------------------
-// Plot B
-function initProphetChartB(histData){
-
-  // 1) 過濾出 "y_pred != null"的資料
-  const fileterd = histData.filter(d => d.y_pred !== null);
-  // 2) 整理 dataset
-  //    - y(藍點)：每筆 (x=d.ds, y=d.y)
-  //    - y_pred(紅點)：每筆 (x=d.ds, y=d.y_pred)
-  //    但都只針對 y_pred != null 的那幾天
-  const yData = fileterd.map(d => ({ x: d.ds, y: d.y}));
-  const yPredData = fileterd.map(d => ({ x: d.ds, y: d.y_pred}))
-
-  // 2) 建立兩個 scatter dataset
-  const yScatter = {
-    label: "實際值 (y)",
-    data: yData,
-    showLine: true,
-    pointRadius: 4,
-    borderColor: "blue",
-    backgroundColor: "blue"
-  };
-
-  const yPredScatter = {
-    label: "預測值 (y_pred)",
-    data: yPredData,
-    showLine: true,
-    pointRadius: 4,
-    borderColor: "red",
-    backgroundColor: "red"
-  }
-
-  // // 3) 收集所有日期 (x軸)
-  // const allDates = histData.map(d => d.ds);
-  // const sortedDates = Array.from(new Set(allDates)).sort((a, b) => new Date(a) - new Date(b))
-
-  // 4) 取得 "recentFutureChart" 的 canvas
-  const ctxB = document.getElementById("recentFutureChart").getContext("2d");
-
-  // 5) 建立 Chart
-  new Chart(ctxB, {
-    type: 'line', // type=Line, 但設置 showLine = false => 變成散點
-    data: {
-      // labels: sortedDates, // x 軸日期
-      datasets: [yScatter, yPredScatter]
-    },
-    options: {
+    const ctxA = document.getElementById("prophetChart").getContext("2d");
+    const chartData = {
+      labels: sortedDates,
+      datasets: [histScatter]
+    };
+    const options = {
       responsive: true,
       scales: {
         x: {
-          type: 'time',
-          distribution: 'series',
-          time: {
-            parser: 'yyyy-MM-dd',
-            unit: 'day',
-            displayFormats: {day: 'yyyy-MM-dd'}
+          type: "time",
+          time: { 
+            parser: "yyyy-MM-dd", 
+            unit: "day", 
+            displayFormats: { day: "yyyy-MM-dd" }
           },
-          ticks: { autoskip: true},
-          title: { display: true, text: 'Date' }
+          title: { display: true, text: "Date" }
         },
         y: {
-          title: {display: true, text: 'CPC 價格'}
+          title: { display: true, text: "CPC 價格" }
         }
       },
       plugins: {
-        legend: {display: true},
-        title: {
-          display: false
+        legend: { display: true },
+        title: { display: false }
+      }
+    };
+    window.chartA = new Chart(ctxA, {
+      type: "line",
+      data: chartData,
+      options: options
+    });
+  }
+
+  // ---------------------
+  // 更新 Plot A (全歷史圖) 篩選日期區間
+  function updateChartAWithRange(startDate, endDate){
+    if(!window.chartA) return;
+
+    // 過濾 rawHistData
+    const filteredHist = window.rawHistData.filter(d => {
+      const dtime = new Date(d.ds);
+      return dtime >= startDate && dtime <= endDate;
+    });
+
+    const sortedDates = filteredHist.map(d => d.ds).sort((a, b) => new Date(a) - new Date(b));
+    const histScatter = {
+      label: "實際值(散點)",
+      data: filteredHist.map(d => ({ x: d.ds, y: d.y })),
+      showLine: false,
+      pointRadius: 1,
+      borderColor: "black",
+      backgroundColor: "black"
+    };
+
+    // update chart
+    window.chartA.data.labels = sortedDates;
+    window.chartA.data.datasets = [histScatter];
+    window.chartA.update();
+  }
+
+  // ---------------------
+  // Plot B (預測決策比較)
+  function initProphetChartB(histData){
+    // 過濾出 "y_pred != null" 的資料
+    const filtered = histData.filter(d => d.y_pred !== null);
+
+    // 準備兩組 dataset
+    const yScatter = {
+      label: "實際值 (y)",
+      data: filtered.map(d => ({ x: d.ds, y: d.y })),
+      showLine: true,
+      pointRadius: 4,
+      borderColor: "blue",
+      backgroundColor: "blue"
+    };
+
+    const yPredScatter = {
+      label: "預測值 (y_pred)",
+      data: filtered.map(d => ({ x: d.ds, y: d.y_pred })),
+      showLine: true,
+      pointRadius: 4,
+      borderColor: "red",
+      backgroundColor: "red"
+    };
+
+    const ctxB = document.getElementById("recentFutureChart").getContext("2d");
+    new Chart(ctxB, {
+      type: 'line',
+      data: {
+        datasets: [yScatter, yPredScatter]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            type: 'time',
+            distribution: 'series',
+            time: {
+              parser: 'yyyy-MM-dd',
+              unit: 'day',
+              displayFormats: { day: 'yyyy-MM-dd' }
+            },
+            ticks: { autoskip: true },
+            title: { display: true, text: 'Date' }
+          },
+          y: {
+            title: { display: true, text: 'CPC 價格' }
+          }
+        },
+        plugins: {
+          legend: { display: true },
+          title: { display: false }
         }
       }
-    }
-  });
-  
-}
+    });
+  }
+
+  // ---------------------
+  // Plot C (歷史 RMSE)
+  function initRmseChart(metricsData){
+    const ctx = document.getElementById("historicalRmseChart").getContext("2d");
+    const labels = metricsData.map(d => {
+      const t = new Date(d.timestamp);
+      return t.toLocaleDateString();
+    });
+
+    const dataPoints = metricsData.map(d => d.RMSE);
+
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "RMSE",
+          data: dataPoints,
+          borderColor: "green",
+          backgroundColor: "green",
+          tension: 0.1,
+          fill: false,
+          pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            type: "category",
+            title: { display: true, text: "日期" },
+            ticks: {
+              autoskip: true,
+              maxTicksLimit: 10
+            }
+          },
+          y: {
+            title: { display: true, text: "RMSE" }
+          }
+        },
+        plugins: {
+          legend: { display: true },
+          title: { display: false }
+        }
+      }
+    });
+  }
+
+
+  // ---------------------
+  // Plot D (歷史 MAPE)
+  function initMapeChart(metricsData){
+    const ctx = document.getElementById("historicalMapeChart").getContext("2d");
+
+    const labels = metricsData.map(d => {
+      const t = new Date(d.timestamp);
+      return t.toLocaleString();
+    });
+
+    // 2)取出MAPE當成y值
+    const dataPoints = metricsData.map(d => d.MAPE)
+
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "MAPE(%)",
+          data: dataPoints,
+          borderColor: "purple",
+          backgroundColor: "purple",
+          tension: 0.1,
+          fill: false,
+          pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            type: "category",
+            title: { display: true, text: "日期" },
+            ticks: {
+              autoskip: true,    //自動跳過多標籤
+              maxTicksLimit: 10  //最多顯示幾個標籤
+            }
+          },
+          y: {
+            title: { display: true, text: "MAPE" }
+          }
+        },
+        plugins: {
+          legend: { display: true },
+          title: { display: false }
+        }
+      }
+    });
+  }
 
 </script>
 {% endblock %}

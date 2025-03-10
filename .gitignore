@@ -6,3 +6,4 @@ venv/
 venc
 .DS_Store
 .env
+xgb_models/
