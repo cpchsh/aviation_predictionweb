@@ -6,7 +6,7 @@ import pymssql
 import joblib
 from datetime import date, datetime
 from dotenv import load_dotenv
-from app.services.db_service import get_error_metrics, save_error_metrics_to_db
+from app.services.db_service import get_error_metrics, save_error_metrics_to_db, get_db_max_date
 
 xgb_bp = Blueprint('xgb_bp', __name__)
 
@@ -170,28 +170,29 @@ def update_cpc_form():
     1) 從資料庫查詢 MAX(日期)
     2) 把該日期帶給前端模板，並將它設為 <input type="date"> 的 max
     """
-    conn = pymssql.connect(server=server, user=user, password=password, database=database)
-    cursor = conn.cursor()
-    try:
-        # 查詢資料表中最大的日期
-        cursor.execute("SELECT MAX(日期) FROM oooiiilll")
-        row = cursor.fetchone()
-        db_max_date = row[0]  # 例如 2023-11-08 00:00:00
+    max_date_str = get_db_max_date()
+    # conn = pymssql.connect(server=server, user=user, password=password, database=database)
+    # cursor = conn.cursor()
+    # try:
+    #     # 查詢資料表中最大的日期
+    #     cursor.execute("SELECT MAX(日期) FROM oooiiilll")
+    #     row = cursor.fetchone()
+    #     db_max_date = row[0]  # 例如 2023-11-08 00:00:00
 
-        # 將 datetime 轉成 YYYY-MM-DD 字串，以便套用在前端
-        if db_max_date:
-            max_date_str = db_max_date.strftime("%Y-%m-%d")
-        else:
-            # 若資料表沒資料，就給個預設吧，例如今天
-            max_date_str = date.today().strftime("%Y-%m-%d")
+    #     # 將 datetime 轉成 YYYY-MM-DD 字串，以便套用在前端
+    #     if db_max_date:
+    #         max_date_str = db_max_date.strftime("%Y-%m-%d")
+    #     else:
+    #         # 若資料表沒資料，就給個預設吧，例如今天
+    #         max_date_str = date.today().strftime("%Y-%m-%d")
 
-    except Exception as e:
-        print("取得資料庫最大日期錯誤:", e)
-        # 若有錯，就給個預設
-        max_date_str = date.today().strftime("%Y-%m-%d")
-    finally:
-        cursor.close()
-        conn.close()
+    # except Exception as e:
+    #     print("取得資料庫最大日期錯誤:", e)
+    #     # 若有錯，就給個預設
+    #     max_date_str = date.today().strftime("%Y-%m-%d")
+    # finally:
+    #     cursor.close()
+    #     conn.close()
 
     # 帶到模板
     return render_template("update_cpc_form.html", db_max_date=max_date_str)
@@ -346,28 +347,7 @@ def update_next_3_lags(cursor, conn, base_date, cpc_val):
 @xgb_bp.route("/xgb_form", methods=["GET"])
 def xgb_input_form_db():
     """顯示自訂 XGB 表單"""
-    conn = pymssql.connect(server=server, user=user, password=password, database=database)
-    cursor = conn.cursor()
-    try:
-        # 查詢資料表中最大的日期
-        cursor.execute("SELECT MAX(日期) FROM oooiiilll")
-        row = cursor.fetchone()
-        db_max_date = row[0]  # 例如 2023-11-08 00:00:00
-
-        # 將 datetime 轉成 YYYY-MM-DD 字串，以便套用在前端
-        if db_max_date:
-            max_date_str = db_max_date.strftime("%Y-%m-%d")
-        else:
-            # 若資料表沒資料，就給個預設吧，例如今天
-            max_date_str = date.today().strftime("%Y-%m-%d")
-
-    except Exception as e:
-        print("取得資料庫最大日期錯誤:", e)
-        # 若有錯，就給個預設
-        max_date_str = date.today().strftime("%Y-%m-%d")
-    finally:
-        cursor.close()
-        conn.close()
+    max_date_str = get_db_max_date()
     return render_template("xgb_form.html", db_max_date=max_date_str)
 
 @xgb_bp.route("/xgb_predict_db_form", methods=["POST"])
