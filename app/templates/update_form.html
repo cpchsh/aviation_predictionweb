@@ -9,7 +9,7 @@
         ℹ️
     </button> -->
     <button type="button" class="p-9 border-0 bg-transparent text-primary" data-bs-toggle="popover" data-bs-html="true" data-bs-placement="right"
-        data-bs-content="1. 請輸入昨日的地區油價<br>2. 回首頁查看預測值<br>3. 新增公告的 CPC 值">
+        data-bs-content="1. 請輸入待預測的地區油價<br>2. 回首頁查看預測值<br>3. 新增決策的 CPC 值">
     ℹ️說明
 </button>
 
@@ -44,7 +44,8 @@
                 <label for="zhoushan" class="form-label">舟山:</label>
                 <input type="number" id="zhoushan" name="zhoushan" class="form-control" step="any" min="1">
             </div>
-            <h3 style="font-weight: bold;">{{cpcDate}} CPC油價: {{price}}</h3>
+            <!-- <h3 style="font-weight: bold;">{{cpcDate}} CPC油價: {{price}}</h3> -->
+            <h3 style="font-weight: bold;">決策的CPC油價: {{price}}</h3>
             <div class="mb-3">
                 <label for="cpc" class="form-label">{{description}} :</label>
                 <input type="number" id="cpc" name="cpc" class="form-control" step="any" min="1">
@@ -94,6 +95,15 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+    const dateInput = document.getElementById("date");
+    const dbMaxDate = "{{ maxDate }}";
+    const dbMinDate = "{{ minDate }}";
+   
+    if (dbMaxDate) {
+        dateInput.setAttribute("max", dbMaxDate);
+        dateInput.setAttribute("min", dbMinDate);
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
     var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
     var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
