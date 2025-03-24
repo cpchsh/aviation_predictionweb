@@ -21,9 +21,14 @@ def get_historical_data():
     cursor = conn.cursor(as_dict=True)
 
     try:
+        # query = """
+        #     SELECT 日期 AS ds, CPC AS y, PredictedCPC AS y_pred
+        #     FROM oooiiilll
+        #     ORDER BY 日期
+        # """
         query = """
-            SELECT 日期 AS ds, CPC AS y, PredictedCPC AS y_pred
-            FROM oooiiilll
+            SELECT 日期 AS ds, CPC AS y, predictCPC AS y_pred
+            FROM aviation_prediction
             ORDER BY 日期
         """
         cursor.execute(query)

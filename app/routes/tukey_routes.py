@@ -4,7 +4,7 @@ import os
 import time
 import requests
 import pymssql
-from datetime import date,datetime
+from datetime import date,datetime, timedelta
 from dotenv import load_dotenv
 
 tukey_bp = Blueprint('tukey_bp', __name__)
@@ -166,6 +166,16 @@ def update_ylag(cursor, conn, latest, second_latest):
     conn.commit()
     return True  
 
+def update_predictCPC(cursor, conn, predictCPC, latest):
+    update_query = """
+        UPDATE aviation_prediction
+        SET predictCPC = %s
+        WHERE 日期 = %s
+    """    
+    cursor.execute(update_query, (predictCPC, latest["日期"]))
+    conn.commit()
+    return True
+
 def send_api_request(predict_info,api_token):
     """ 發送預測請求並獲取結果 """
     
@@ -227,17 +237,25 @@ def close_connection(conn, cursor):
 def update_form():
     conn = pymssql.connect(server=server, user=user, password=password, database=database)
     cursor = conn.cursor(as_dict=True)
-    today = date.today().strftime("%Y-%m-%d")
+    # today = date.today().strftime("%Y-%m-%d")
+    today = date.today()
+   
     print(today)
     data=fetch_latest_data(cursor,today)
     # print(data)
     # print(data[0])
     if data[0]['CPC'] is not None:
         description="更新"
+        maxDate=today - timedelta(days=1)
+        minDate=data[0]['日期']
     else:
         description="新增"
+        maxDate=data[0]['日期']
+        minDate=maxDate
     cpcDate=data[0]['日期']
-    return render_template("update_form.html",description=description,cpcDate=cpcDate,price=data[0]['CPC'])
+
+
+    return render_template("update_form.html",description=description,cpcDate=cpcDate,price=data[0]['CPC'],maxDate=maxDate,minDate=minDate)
 
 @tukey_bp.route("/update", methods=["POST"])
 def update():
@@ -266,7 +284,8 @@ def update():
             # print(f"✅ 已更新 {input['日期']} 的 CPC 值為 {input['CPC']}")
             return jsonify({
                         "status": "insert_success",
-                        "message": f"✅ 已更新 {input['日期']} 的 CPC 值為 {input['CPC']}",
+                        # "message": f"✅ 已更新 {input['日期']} 的 CPC 值為 {input['CPC']}",
+                        "message": f"✅ 已更新決策的 CPC 值為 {input['CPC']}",
                         "redirect": url_for("main_bp.index")
                     })
             
@@ -387,12 +406,16 @@ def predict_next_day_tukey():
 
         # 3.發送 API 請求並獲取預測結果
         # api_token = "37d9fd65-77d5-464f-8038-3cfee4d525de" #無ylag
-        api_token = "3babb936-d258-44bc-981e-e4c358055ad7"
+        # "3babb936-d258-44bc-981e-e4c358055ad7" 有ylag old knn
+        api_token = "fac8c081-b08b-4640-931a-cab285289414" # 0321 svm
 
         get_api_path = send_api_request(predict_info,api_token)
         predicted_value = poll_prediction_result(get_api_path)
+        if predicted_value:
+            update_predictCPC(cursor, conn,predicted_value,latest_record)
+            print("✅ 成功更新預測值")
 
-        predicted_results.append(predicted_value)
+            predicted_results.append(predicted_value)
         return predicted_results
 
     except Exception as e:
@@ -432,7 +455,7 @@ def tukey_predict_custom():
     print("📜 predict_info",predict_info)
 
     # 發送 API 請求並獲取預測結果
-    api_token = "3babb936-d258-44bc-981e-e4c358055ad7"
+    api_token = "fac8c081-b08b-4640-931a-cab285289414"
     predict_info.pop("日期", None)  # 移除 "日期"
     predict_info = [predict_info]
 
@@ -467,7 +490,7 @@ def tukey_predict_noDate():
     print("📜 predict_info",predict_info)
 
     # 發送 API 請求並獲取預測結果
-    api_token = "37d9fd65-77d5-464f-8038-3cfee4d525de"
+    api_token = "37d9fd65-77d5-464f-8038-3cfee4d525de" #無ylag
 
     predict_info.pop("日期", None)  # 移除 "日期"
     predict_info = [predict_info]
