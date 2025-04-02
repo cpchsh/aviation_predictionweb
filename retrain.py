@@ -37,7 +37,7 @@ def train_model():
                 [y_lag_2],
                 [y_lag_3],
                 [is_final_cpc]
-            FROM [BDC_TEST].[dbo].[oooiiilll]
+            FROM [BDC_TEST].[dbo].[oooiiilll_new]
             WHERE [is_final_cpc] = 1
             ORDER BY [日期]
         """

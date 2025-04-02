@@ -39,7 +39,7 @@
       <p> 目前統計:
         <br>RMSE=<b>{{ rmse }}</b>
         <br>MAPE=<b>{{ mape }}%</b>
-        <br>模型已於<span id="reTrainTimeDisplay">讀取中...</span>重新訓練</b>
+        <!-- <br>模型已於<span id="reTrainTimeDisplay">讀取中...</span>重新訓練</b> -->
       </p>
     </div>
   </div>
@@ -93,8 +93,8 @@
 
 <!-- jQuery + Chart.js + date-fns -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<!-- <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script> -->
+<script src="/static/js/chartjs-adapter-date-fns.bundle.min.js"></script>
 
 <script>
   // 全域變數，儲存所有「全歷史」資料
@@ -133,17 +133,17 @@
         console.error("Error fetch metricsData:", err);
       });
 
-    // 3) 取得 模型最新重新訓練時間
-    fetch("/api/latest_log_time")
-      .then(r => r.json())
-      .then(data => {
-        console.log("reTrainTime", data);
-        document.getElementById("reTrainTimeDisplay").innerText = data.latest_log_time || "未知";
-      })
-      .catch(err => {
-        console.error("Error fetch reTrainTime:", err);
-        document.getElementById("reTrainTimeDisplay").innerText = "錯誤";
-      })
+    // // 3) 取得 模型最新重新訓練時間
+    // fetch("/api/latest_log_time")
+    //   .then(r => r.json())
+    //   .then(data => {
+    //     console.log("reTrainTime", data);
+    //     document.getElementById("reTrainTimeDisplay").innerText = data.latest_log_time || "未知";
+    //   })
+    //   .catch(err => {
+    //     console.error("Error fetch reTrainTime:", err);
+    //     document.getElementById("reTrainTimeDisplay").innerText = "錯誤";
+    //   })
 
     // 4) 「套用篩選」按鈕
     const applyBtn = document.getElementById("applyFilterBtn");
