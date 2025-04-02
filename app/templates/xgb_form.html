@@ -9,7 +9,13 @@
             <legend style="font-weight: bold;">XGB 自訂輸入</legend>
             <div class="mb-3">
                 <label for="date" class="form-label">日期:</label>
-                <input type="date" id="date" name="date" class="form-control"  value="{{ db_max_date }}"     required>
+                <input type="date" id="date" name="date"
+                       min="{{ min_date_str }}" 
+                       class="form-control"  
+                       value="{{ min_date_str }}"
+                       min="{{ min_date_str }}"
+                       max="{{ max_date_str }}"     
+                       required>
             </div>
             <div class="mb-3">
                 <label for="japan" class="form-label">日本:</label>
