@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Tukey 預測結果{% endblock %}
+{% block title %}航油價格預測{% endblock %}
 
 {% block content %}
 <div id="loading" style="display:none;">
@@ -17,8 +17,8 @@
         今天 ({{ next_day2 }}) 價格預測 (Tukey)
       </h2>
       <p class="card-text text-danger fs-5">預測值: <b>{{ tukey_pred }}</b></p>
-      <a href="/tukey_form" class="btn">自訂輸入</a>
-      <a href="/tukey_form_noDate" class="btn">自訂輸入(不含日期)</a>
+      <!-- <a href="/tukey_form" class="btn">自訂輸入</a>
+      <a href="/tukey_form_noDate" class="btn">自訂輸入(不含日期)</a> -->
     </div>
   </div>
 
@@ -73,7 +73,7 @@
     </div>
 
     <div class="col-md-6">
-      <h3>預測決策比較</h3>
+      <h3>預測決策比較(Tukey)</h3>
       <canvas id="recentFutureChart" width="500" height="400"></canvas>
     </div>
 
@@ -269,7 +269,7 @@
     // 過濾出 "y_pred != null" 的資料
     const filtered = histData.filter(d => d.y_pred !== null);
 
-    // 準備兩組 dataset
+    // 準備兩組 dataset 
     const yScatter = {
       label: "實際值 (y)",
       data: filtered.map(d => ({ x: d.ds, y: d.y })),
@@ -278,6 +278,26 @@
       borderColor: "blue",
       backgroundColor: "blue"
     };
+
+    //有Shift
+    // const today = new Date(); // 取得今天的日期
+    // const today = new Date(new Date().setHours(0, 0, 0, 0));
+
+    // const lastIndex = filtered.length - 1; // 取得最後一個索引
+
+    // const yScatter = {
+    //   label: "實際值 (y)",
+    //   data: filtered.map((d, i) => ({
+    //     x: i === lastIndex 
+    //       ? today  // 最後一個點設為今天
+    //       : new Date(new Date(filtered[i + 1].ds).setHours(0, 0, 0, 0)), // 其他點的 x 設為下一個點的 x
+    //     y: d.y
+    //   })),
+    //   showLine: true,
+    //   pointRadius: 4,
+    //   borderColor: "blue",
+    //   backgroundColor: "blue"
+    // };
 
     const yPredScatter = {
       label: "預測值 (y_pred)",

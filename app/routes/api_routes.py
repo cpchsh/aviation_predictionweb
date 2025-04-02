@@ -54,12 +54,18 @@ def get_historical_data():
                            password=DB_PASSWORD, database=DB_NAME)
     cursor = conn.cursor(as_dict=True)
     try:
+        # query = """
+        #     SELECT 日期 AS ds, CPC AS y, PredictedCPC AS y_pred
+        #     FROM oooiiilll
+        #     ORDER BY 日期
+        # """
         query = """
             SELECT 
                 日期 AS ds,
                 CPC AS y,
                 PredictedCPC AS y_pred
             FROM oooiiilll_new
+
             ORDER BY 日期
         """
         cursor.execute(query)
