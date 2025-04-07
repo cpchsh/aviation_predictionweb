@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta
 from dotenv import load_dotenv
 
 # 自訂的 function, service
-from app.services.db_service import get_error_metrics, save_error_metrics_to_db, get_db_max_date
+from app.services.db_service import get_error_metrics, save_error_metrics_to_db, get_db_max_date, fetch_is_final
 
 xgb_bp = Blueprint('xgb_bp', __name__)
 
@@ -284,15 +284,7 @@ def update_cpc_form():
 
 @xgb_bp.route("/update_cpc", methods=["POST"])
 def update_cpc():
-    """
-    使用者在表單裡輸入 cpc_date 與 cpc_val，
-    1) 先檢查 cpc_date <= 資料庫 max_date
-    2) 找比 cpc_date 更早的一筆 => target_date
-    3) 更新 target_date 的 CPC
-    4) 更新 cpc_date => is_final_cpc=1 & CPC
-    5) 更新 y_lag
-    6) 計算誤差 & 寫入DB
-    """
+    """只能更新資料庫最新日期的CPC"""
     # 1) 取得表單日期與CPC
     cpc_date_str = request.form.get("cpc_date", "")
     cpc_value_str = request.form.get("cpc_value", "")
@@ -316,8 +308,9 @@ def update_cpc():
                 cursor.execute("SELECT MAX(日期) AS max_date FROM oooiiilll_new")
                 row = cursor.fetchone()
                 db_max_date = row["max_date"]
-                if db_max_date and cpc_date > db_max_date:
-                    return f"不可輸入超過資料庫最新日期 {db_max_date}"
+                # 僅允許更新最新日
+                if cpc_date != db_max_date:
+                    return f"只能修改最新日期 {db_max_date} 的 CPC"
 
                 # B) 找 target_date => 比 cpc_date 更早且最近的一筆
                 sql_prev = """
@@ -389,7 +382,10 @@ def update_cpc():
 def xgb_input_form_db():
     """
     顯示自訂 XGB 表單
+      - 若最新那天 is_final_cpc = 0 -> 允許當天就能填(供填錯更改用)
+      - 若最新那天 is_final_cpc = 1 -> 只能填 「最新日 + 1」
     """
+    # 1. 取得資料庫最新日期字串
     max_date_str = get_db_max_date()
     try:
         db_max_date = datetime.strptime(max_date_str, "%Y-%m-%d").date()
@@ -397,20 +393,25 @@ def xgb_input_form_db():
         # 萬一parse失敗=>預設
         db_max_date = date(2023, 12, 4)
 
-    # 計算 min_date = (db_max_date + 1)
-    min_date  = db_max_date + timedelta(days=1)
-    # 計算 max_date_form_form = (今天 -1)
+    # 2. 再查該日期的 is_final_cpc
+    is_final = fetch_is_final(db_max_date)
+
+    # 3 決定 min_date
+    if is_final:
+        # 已決策 => 只能填下一天
+        min_date = db_max_date + timedelta(days=1)
+    else:
+        # 未決測
+        min_date = db_max_date
+
+    # 4 max_date = 今天-1
     today = datetime.now().date()
     max_date_for_form = today - timedelta(days=1)
-    
 
-    # 轉成字串
-    min_date_str = min_date.isoformat()
-    max_date_str_input = max_date_for_form.isoformat()
     return render_template("xgb_form.html", 
                            db_max_date=max_date_str,
-                           min_date_str=min_date_str,
-                           max_date_str=max_date_str_input)
+                           min_date_str=min_date.isoformat(),
+                           max_date_str=max_date_for_form.isoformat())
 
 @xgb_bp.route("/xgb_predict_db_form", methods=["POST"])
 def xgb_predict_db_form():

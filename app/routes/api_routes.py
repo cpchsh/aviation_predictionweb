@@ -110,6 +110,78 @@ def get_historical_data():
         conn.close()
 
 
+@api_bp.route("/api/historical_alldata", methods=["GET"])
+def get_historical_alldata():
+    """
+    從資料庫撈歷史資料，並將 y, y_pred 用「上一筆」的資料覆蓋，
+    若是第一筆(沒有上一筆)，就補 0
+    """
+    conn = pymssql.connect(server=DB_SERVER, user=DB_USER, 
+                           password=DB_PASSWORD, database=DB_NAME)
+    cursor = conn.cursor(as_dict=True)
+    try:
+        # query = """
+        #     SELECT 日期 AS ds, CPC AS y, PredictedCPC AS y_pred
+        #     FROM oooiiilll
+        #     ORDER BY 日期
+        # """
+        query = """
+            SELECT 
+                日期 AS ds,
+				日本 AS japan,
+				南韓 AS korea,
+				香港 AS hongkong,
+				新加坡 AS singapore,
+				上海 AS shanghai,
+				舟山 AS zhoushan,
+                CPC AS y,
+                PredictedCPC AS y_pred
+            FROM oooiiilll_new
+
+            ORDER BY 日期
+        """
+        cursor.execute(query)
+        rows = cursor.fetchall()  # list of dict
+
+        # 1) 轉換日期格式 (原程式流程)
+        for row in rows:
+            if isinstance(row["ds"], (datetime, date)):
+                row["ds"] = row["ds"].strftime("%Y-%m-%d")
+
+        # 2) 在 Python 端做「往下位移一格」的轉換
+        #    create a new list, or 直接原地修改
+        prev_y = 0
+        prev_y_pred = 0
+
+        for i, row in enumerate(rows):
+            # 用 temp 暫存當前的 y, y_pred
+            current_y = row["y"]
+            current_y_pred = row["y_pred"]
+
+            if i == 0:
+                # 第一筆 => 沒有上一筆 => 全補None
+                row["y"] = None
+                row["y_pred"] = None
+            else:
+                # 其餘 => 用上一筆的 y, y_pred
+                row["y"] = prev_y
+                row["y_pred"] = prev_y_pred
+
+            # 更新 prev_xxx 為當前原始值 (給下一筆使用)
+            prev_y = current_y
+            prev_y_pred = current_y_pred
+
+        # rows 內容就已經完成「位移」，第一筆=0, 之後每筆 = 上一筆的原值
+
+        return jsonify(rows)
+    except Exception as e:
+        print("get_historical_data 錯誤:", e)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
 @api_bp.route("/api/metrics_data", methods=["GET"])
 def get_metrics_data():
     """

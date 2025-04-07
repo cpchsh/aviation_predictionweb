@@ -61,7 +61,7 @@
 
   <!-- Prophet Plot A - 全歷史圖 + 篩選器 -->
   <div class="row mb-4">
-    <div class="col-md-6">
+    <div class="col-md-12">
       <h3>全歷史圖（可篩日期）</h3>
       <!-- 篩選器表單 -->
       <div class="mb-2">
@@ -69,10 +69,10 @@
         <label>結束日期: <input type="date" id="endDateInput" /></label>
         <button id="applyFilterBtn" class="btn btn-sm btn-primary">套用篩選</button>
       </div>
-      <canvas id="prophetChart" width="500" height="400"></canvas>
+      <canvas id="allSeriesChart" width="500" height="400"></canvas>
     </div>
 
-    <div class="col-md-6">
+    <div class="col-md-12">
       <h3>預測決策比較</h3>
       <canvas id="recentFutureChart" width="500" height="400"></canvas>
     </div>
@@ -94,11 +94,15 @@
 <!-- jQuery + Chart.js + date-fns -->
 <script src="/static/js/jquery-3.6.0.min.js"></script>
 <!-- <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script> -->
+<script src="/static/js/chart.umd.min.js"></script>
 <script src="/static/js/chartjs-adapter-date-fns.bundle.min.js"></script>
+
 
 <script>
   // 全域變數，儲存所有「全歷史」資料
   let rawHistData = [];
+  // 取得所有歷史資料
+  let rawAllData = []; //全域暫存
   let chartA = null;  // Plot A 的 Chart 實例
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -111,17 +115,32 @@
         // 全域存起來
         window.rawHistData = histData;
 
-        // 初始化畫圖(不篩選 => 全部)
-        initProphetChartA(histData);
+        // // 初始化畫圖(不篩選 => 全部)
+        // initCPCChartA(histData);
 
         // 畫 Plot B (預測決策比較)
-        initProphetChartB(histData);
+        initCPCChartB(histData);
       })
       .catch(err => {
         console.error("Error fetch hist/forecast:", err);
       });
 
-    // 2) 取得 /api/metrics_data (歷史 RMSE, MAPE)
+    // 2) 取得 /api/historical_alldata
+    fetch("/api/historical_alldata")
+      .then(r => r.json())
+      .then(data=> {
+        console.log("Historical data:", data);
+
+        // 全域存起來
+        rawAllData = data;
+
+        initAllSeriesChart(rawAllData);
+      })
+      .catch(err => {
+        console.error("Error fetch hist/forecast:", err);
+      });
+
+    // 3) 取得 /api/metrics_data (歷史 RMSE, MAPE)
     fetch("/api/metrics_data")
       .then(r => r.json())
       .then(metricsData => {
@@ -162,7 +181,7 @@
         return;
       }
       // 過濾
-      updateChartAWithRange(startDate, endDate);
+      updateAllSeriesChart(startDate, endDate);
     });
 
     // Append & Train
@@ -189,7 +208,7 @@
 
   // ---------------------
   // Plot A init (全歷史圖)
-  function initProphetChartA(histData){
+  function initCPCChartA(histData){
     // 1) 依日期排序
     const sortedDates = histData.map(d => d.ds).sort((a, b) => new Date(a) - new Date(b));
 
@@ -203,7 +222,7 @@
       backgroundColor: "black"
     };
 
-    const ctxA = document.getElementById("prophetChart").getContext("2d");
+    const ctxA = document.getElementById("CPCChart").getContext("2d");
     const chartData = {
       labels: sortedDates,
       datasets: [histScatter]
@@ -263,9 +282,96 @@
     window.chartA.update();
   }
 
+  // -------------------- 初始化 7 條線圖-----------------
+  function initAllSeriesChart(hist) {
+
+    // 1. 日期 (依時間排序)
+    const labels = hist.map(d => d.ds).sort((a, b) => new Date(a) - new Date(b));
+
+    // 2. 為每個欄位建立 dataset
+    const colors = {
+      japan:      "#e41a1c",
+      korea:      "#377eb8",
+      hongkong:   "#4daf4a",
+      singapore:  "#984ea3",
+      shanghai:   "#ff7f00",
+      zhoushan:   "#a65628",
+      cpc:        "#000000"   // 黑色
+    };
+
+    function makeSeries(key, label, color, showLine=true, dash=[]) {
+      return {
+        label,
+        data: hist.map(d => ({x:d.ds, y:d[key]})),
+        borderColor: color,
+        backgroundColor: color,
+        fill: false,
+        showLine,
+        tension: 0.1,
+        borderDash: dash,
+        pointRadius: 1
+      };
+    }
+
+    const datasets = [
+      makeSeries("japan"    ,"日本"    ,colors.japan),
+      makeSeries("korea"    ,"南韓"    ,colors.korea),
+      makeSeries("hongkong" ,"香港"    ,colors.hongkong),
+      makeSeries("singapore","新加坡"  ,colors.singapore),
+      makeSeries("shanghai" ,"上海"    ,colors.shanghai),
+      makeSeries("zhoushan" ,"舟山"    ,colors.zhoushan),
+      makeSeries("y"      ,"CPC"     ,colors.cpc ,true,[5,5])   // CPC 畫虛線
+    ];
+
+    const ctx = document.getElementById("allSeriesChart").getContext("2d");
+    window.allSeriesChart = new Chart(ctx,{
+      type:"line",
+      data:{ labels, datasets},
+      options:{
+        responsive: true,
+        scales: {
+          x: {
+            type: "time",
+            time: {parser: "yyyy-MM-dd", unit: "day", displayFormats: {day: "yyyy-MM-dd"}},
+            title: {display: true, text: "Date"}
+          },
+          y: {title: {display: true, text: "價格"}}
+        },
+        plugins: {
+          legend: {position: "bottom"},
+          title: {display:false}
+        }
+      }
+    });
+  }
+
+  // ----------依日期篩選 -------------
+  function updateAllSeriesChart(startDate, endDate) {
+    if(!window.allSeriesChart) return;
+    const f = rawAllData.filter(d => {
+      const dt = new Date(d.ds);
+      return dt>=startDate && dt<=endDate;
+    });
+    const labels = f.map(d=>d.ds).sort((a,b)=>new Date(a) - new Date(b));
+
+    window.allSeriesChart.data.labels = labels;
+    window.allSeriesChart.data.datasets.forEach(ds=>{
+      const key = ds.label==="CPC" ? "y"
+                : ds.label==="日本" ? "japan"
+                : ds.label==="南韓" ? "korea"
+                : ds.label==="香港" ? "hongkong"
+                : ds.label==="新加坡" ? "singapore"
+                : ds.label==="上海" ? "shanghai"
+                : ds.label==="舟山" ? "zhoushan"
+                : "";          // 依 label 找對應欄
+      ds.data = f.map(d=>({x:d.ds,y:d[key]}));
+    });
+    window.allSeriesChart.update();
+  }
+
   // ---------------------
   // Plot B (預測決策比較)
-  function initProphetChartB(histData){
+  function initCPCChartB(histData){
     // 過濾出 "y_pred != null" 的資料
     const filtered = histData.filter(d => d.y_pred !== null);
 
