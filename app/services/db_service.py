@@ -395,3 +395,19 @@ def get_db_max_date():
     finally:
         cursor.close()
         conn.close()
+
+
+def fetch_is_final(db_date):
+    try:
+        with pymssql.connect(server=DB_SERVER, user=DB_USER, password=DB_PASSWORD, database=DB_NAME) as conn:
+            with conn.cursor(as_dict=True) as cur:
+                cur.execute("""
+                    SELECT is_final_cpc
+                    FROM oooiiilll_new
+                    WHERE 日期 = %s
+                """, (db_date,))
+                row = cur.fetchone()
+                return bool(row and row["is_final_cpc"])
+    except Exception as e:
+        print("[ERR] fetch_is_final:", e)
+        return None
