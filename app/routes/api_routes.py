@@ -272,3 +272,50 @@ def get_metrics_data():
 #     except Exception as e:
 #         print("讀取最新 log 時間發生錯誤:", e)
 #         return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/api/historical_backenddata", methods=["GET"])
+def get_historical_backenddata_html():
+    """
+    查最近7日，不做 shift，以表格HTML回傳
+    """
+    conn = pymssql.connect(server=DB_SERVER, user=DB_USER, password=DB_PASSWORD, database=DB_NAME)
+    cursor = conn.cursor(as_dict=True)
+    try:
+        query = """
+            SELECT TOP 7
+                日期 AS ds,
+                日本 AS japan,
+                南韓 AS korea,
+                香港 AS hongkong,
+                新加坡 AS singapore,
+                上海 AS shanghai,
+                舟山 AS zhoushan,
+                CPC,
+                PredictedCPC
+            FROM oooiiilll_new
+            ORDER BY 日期 DESC
+        """
+        cursor.execute(query)
+        rows = cursor.fetchall()
+    finally:
+        cursor.close()
+        conn.close()
+
+    # 做HTML表
+    html = "<table border='1'>"
+    html += "<tr><th>日期</th><th>日本</th><th>南韓</th><th>香港</th><th>新加坡</th><th>上海</th><th>舟山</th><th>CPC</th><th>PredictedCPC</th></tr>"
+    for r in rows:
+        ds_str = r["ds"].strftime("%Y-%m-%d") if isinstance(r["ds"], datetime) else str(r["ds"])
+        japan_val = r["japan"] if r["japan"] else ""
+        korea_val = r["korea"] if r["korea"] else ""
+        hongkong_val = r["hongkong"] if r["hongkong"] else ""
+        singapore_val = r["singapore"] if r["singapore"] else ""
+        shanghai_val = r["shanghai"] if r["shanghai"] else ""
+        zhoushan_val = r["zhoushan"] if r["zhoushan"] else ""
+        cpc_val = r["CPC"] if r["CPC"] else ""
+        pred_val = r["PredictedCPC"] if r["PredictedCPC"] else ""
+        html += f"<tr><td>{ds_str}</td><td>{japan_val}</td><td>{korea_val}</td><td>{hongkong_val}</td><td>{singapore_val}</td><td>{shanghai_val}</td><td>{zhoushan_val}</td><td>{cpc_val}</td><td>{pred_val}</td></tr>"
+    html += "</table>"
+
+    return html
