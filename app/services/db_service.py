@@ -181,96 +181,225 @@ xgb_model = joblib.load(xgb_model_path)
 #         cursor.close()
 #         conn.close()
 
+# def get_recent_7_records(filter_date=None):
+#     """
+#     查詢「最新 7 筆」或「指定日期(含當天) 前 7 筆」的紀錄 (依日期 DESC)
+#     - 第 1 筆：今日日期(ports=Null)，CPC/PredictedCPC/is_final_cpc=原始最新那筆的值
+#     - 後續(7筆)：保留自己港口，CPC等 3 欄位用 LEAD(下一筆)
+#     - 最後共 8 筆
+#     """
+#     conn = pymssql.connect(DB_SERVER, DB_USER, DB_PASSWORD, DB_NAME)
+#     cursor = conn.cursor(as_dict=True)
+
+#     try:
+#         # query = """
+#         #     WITH cte AS (
+#         #         SELECT
+#         #             ROW_NUMBER() OVER (ORDER BY 日期 DESC) AS rn,
+#         #             日期,
+#         #             [日本],
+#         #             [南韓],
+#         #             [香港],
+#         #             [新加坡],
+#         #             [上海],
+#         #             [舟山],
+#         #             LEAD(CPC) OVER (ORDER BY 日期 DESC) AS next_CPC,
+#         #             LEAD(PredictedCPC) OVER (ORDER BY 日期 DESC) AS next_PredictedCPC,
+#         #             CPC,
+#         #             PredictedCPC,
+#         #             is_final_cpc
+#         #         FROM oooiiilll_new
+#         # """
+#         query = """
+#             WITH cte AS (
+#                 SELECT
+#                     ROW_NUMBER() OVER (ORDER BY 日期 DESC) AS rn,
+#                     日期,
+#                     [日本],
+#                     [南韓],
+#                     [香港],
+#                     [新加坡],
+#                     [上海],
+#                     [舟山],
+#                     LEAD(CPC) OVER (ORDER BY 日期 DESC) AS next_CPC,
+#                     LEAD(predictCPC) OVER (ORDER BY 日期 DESC) AS next_predictCPC,
+#                     CPC,
+#                     predictCPC
+#                 FROM aviation_prediction
+#         """
+
+#         # 有日期篩選時加
+#         if filter_date:
+#             query += " WHERE 日期 <= %s "
+
+#         # query += """
+#         #     )
+#         #     SELECT
+#         #         sort_order,
+#         #         rn,
+#         #         日期,
+#         #         [日本],
+#         #         [南韓],
+#         #         [香港],
+#         #         [新加坡],
+#         #         [上海],
+#         #         [舟山],
+#         #         CPC,
+#         #         PredictedCPC,
+#         #         is_final_cpc
+#         #     FROM
+#         #     (
+#         #         SELECT
+#         #             0 AS sort_order,
+#         #             0 AS rn,
+#         #             CONVERT(date, GETDATE()) AS 日期,
+#         #             NULL AS [日本],
+#         #             NULL AS [南韓],
+#         #             NULL AS [香港],
+#         #             NULL AS [新加坡],
+#         #             NULL AS [上海],
+#         #             NULL AS [舟山],
+#         #             NULL AS [CPC],
+#         #             (SELECT TOP 1 c2.PredictedCPC
+#         #              FROM cte c2
+#         #              WHERE c2.rn=1) AS PredictedCPC,
+#         #             (SELECT TOP 1 c2.is_final_cpc
+#         #              FROM cte c2
+#         #              WHERE c2.rn=1) AS is_final_cpc
+
+#         #         UNION ALL
+
+#         #         SELECT
+#         #             1 AS sort_order,
+#         #             c.rn,
+#         #             c.日期,
+#         #             c.[日本],
+#         #             c.[南韓],
+#         #             c.[香港],
+#         #             c.[新加坡],
+#         #             c.[上海],
+#         #             c.[舟山],
+#         #             COALESCE(c.next_CPC, c.CPC) AS CPC,
+#         #             COALESCE(c.next_PredictedCPC, c.PredictedCPC) AS PredictedCPC,
+#         #             c.[is_final_cpc]
+#         #         FROM cte c
+#         #         WHERE c.rn <= 7
+#         #     ) AS unioned
+#         #     ORDER BY sort_order, rn;
+#         # """
+#         query += """
+#             )
+#             SELECT
+#                 sort_order,
+#                 rn,
+#                 日期,
+#                 [日本],
+#                 [南韓],
+#                 [香港],
+#                 [新加坡],
+#                 [上海],
+#                 [舟山],
+#                 CPC,
+#                 predictCPC
+#             FROM
+#             (
+#                 SELECT
+#                     0 AS sort_order,
+#                     0 AS rn,
+#                     CONVERT(date, GETDATE()) AS 日期,
+#                     NULL AS [日本],
+#                     NULL AS [南韓],
+#                     NULL AS [香港],
+#                     NULL AS [新加坡],
+#                     NULL AS [上海],
+#                     NULL AS [舟山],
+#                     NULL AS [CPC],
+#                     (SELECT TOP 1 c2.predictCPC
+#                      FROM cte c2
+#                      WHERE c2.rn=1) AS predictCPC
+
+#                 UNION ALL
+
+#                 SELECT
+#                     1 AS sort_order,
+#                     c.rn,
+#                     c.日期,
+#                     c.[日本],
+#                     c.[南韓],
+#                     c.[香港],
+#                     c.[新加坡],
+#                     c.[上海],
+#                     c.[舟山],
+#                     COALESCE(c.next_CPC, c.CPC) AS CPC,
+#                     COALESCE(c.next_predictCPC, c.predictCPC) AS predictCPC
+#                 FROM cte c
+#                 WHERE c.rn <= 7
+#             ) AS unioned
+#             ORDER BY sort_order, rn;
+#         """
+
+#         if filter_date:
+#             cursor.execute(query, (filter_date,))
+#         else:
+#             cursor.execute(query)
+
+#         rows = cursor.fetchall()
+#         return rows
+
+#     finally:
+#         cursor.close()
+#         conn.close()
+
 def get_recent_7_records(filter_date=None):
     """
     查詢「最新 7 筆」或「指定日期(含當天) 前 7 筆」的紀錄 (依日期 DESC)
-    - 第 1 筆：今日日期(ports=Null)，CPC/PredictedCPC/is_final_cpc=原始最新那筆的值
-    - 後續(7筆)：保留自己港口，CPC等 3 欄位用 LEAD(下一筆)
+    - 第 1 筆：今日日期 (ports=Null)，CPC/predictCPC 取原始最新一筆
+    - 後續(7筆)：保留自己港口欄位，CPC/predictCPC 往後挪一日
     - 最後共 8 筆
     """
     conn = pymssql.connect(DB_SERVER, DB_USER, DB_PASSWORD, DB_NAME)
     cursor = conn.cursor(as_dict=True)
 
     try:
-        query = """
-            WITH cte AS (
-                SELECT
-                    ROW_NUMBER() OVER (ORDER BY 日期 DESC) AS rn,
-                    日期,
-                    [日本],
-                    [南韓],
-                    [香港],
-                    [新加坡],
-                    [上海],
-                    [舟山],
-                    LEAD(CPC) OVER (ORDER BY 日期 DESC) AS next_CPC,
-                    LEAD(PredictedCPC) OVER (ORDER BY 日期 DESC) AS next_PredictedCPC,
-                    CPC,
-                    PredictedCPC,
-                    is_final_cpc
-                FROM oooiiilll_new
-        """
+        base_sql = """
+SELECT
+    T0.日期,
+    T0.[日本], T0.[南韓], T0.[香港],
+    T0.[新加坡], T0.[上海], T0.[舟山],
+    X.CPC,
+    X.predictCPC
+FROM
+(
+    -- 包含「今天」這一筆
+    SELECT
+        CONVERT(date, GETDATE()) AS 日期,
+        NULL AS [日本], NULL AS [南韓], NULL AS [香港],
+        NULL AS [新加坡], NULL AS [上海], NULL AS [舟山]
+    UNION ALL
+    -- 再取最新 7 筆原始資料
+    SELECT TOP 7
+        日期, [日本], [南韓], [香港], [新加坡], [上海], [舟山]
+    FROM oil_prediction_shift
+    {where_clause}
+    ORDER BY 日期 DESC
+) AS T0
+OUTER APPLY
+(
+    -- 找出比 T0.日期 小的下一筆 CPC/predictCPC
+    SELECT TOP 1
+        t.CPC,
+        t.predictCPC
+    FROM oil_prediction_shift AS t
+    WHERE t.日期 < T0.日期
+    ORDER BY t.日期 DESC
+) AS X
+ORDER BY T0.日期 DESC;
+"""
+        # 如果有 filter_date，就加 WHERE
+        where_clause = "WHERE 日期 <= %s" if filter_date else ""
+        query = base_sql.format(where_clause=where_clause)
 
-        # 有日期篩選時加
-        if filter_date:
-            query += " WHERE 日期 <= %s "
-
-        query += """
-            )
-            SELECT
-                sort_order,
-                rn,
-                日期,
-                [日本],
-                [南韓],
-                [香港],
-                [新加坡],
-                [上海],
-                [舟山],
-                CPC,
-                PredictedCPC,
-                is_final_cpc
-            FROM
-            (
-                SELECT
-                    0 AS sort_order,
-                    0 AS rn,
-                    CONVERT(date, GETDATE()) AS 日期,
-                    NULL AS [日本],
-                    NULL AS [南韓],
-                    NULL AS [香港],
-                    NULL AS [新加坡],
-                    NULL AS [上海],
-                    NULL AS [舟山],
-                    NULL AS [CPC],
-                    (SELECT TOP 1 c2.PredictedCPC
-                     FROM cte c2
-                     WHERE c2.rn=1) AS PredictedCPC,
-                    (SELECT TOP 1 c2.is_final_cpc
-                     FROM cte c2
-                     WHERE c2.rn=1) AS is_final_cpc
-
-                UNION ALL
-
-                SELECT
-                    1 AS sort_order,
-                    c.rn,
-                    c.日期,
-                    c.[日本],
-                    c.[南韓],
-                    c.[香港],
-                    c.[新加坡],
-                    c.[上海],
-                    c.[舟山],
-                    COALESCE(c.next_CPC, c.CPC) AS CPC,
-                    COALESCE(c.next_PredictedCPC, c.PredictedCPC) AS PredictedCPC,
-                    c.[is_final_cpc]
-                FROM cte c
-                WHERE c.rn <= 7
-            ) AS unioned
-            ORDER BY sort_order, rn;
-        """
-
+        # 執行
         if filter_date:
             cursor.execute(query, (filter_date,))
         else:
@@ -282,6 +411,7 @@ def get_recent_7_records(filter_date=None):
     finally:
         cursor.close()
         conn.close()
+
 
 
 def get_error_metrics():
