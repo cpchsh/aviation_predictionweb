@@ -63,8 +63,8 @@ def get_historical_data():
             SELECT 
                 日期 AS ds,
                 CPC AS y,
-                PredictedCPC AS y_pred
-            FROM oooiiilll_new
+                predictCPC AS y_pred
+            FROM oil_prediction_shift
 
             ORDER BY 日期
         """
@@ -135,8 +135,8 @@ def get_historical_alldata():
 				上海 AS shanghai,
 				舟山 AS zhoushan,
                 CPC AS y,
-                PredictedCPC AS y_pred
-            FROM oooiiilll_new
+                predictCPC AS y_pred
+            FROM oil_prediction_shift
 
             ORDER BY 日期
         """

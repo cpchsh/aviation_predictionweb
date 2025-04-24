@@ -46,7 +46,7 @@ def fetch_latest_data(cursor, date, limit=1, condition="<"):
     """ 查詢最新 N 筆資料，條件可變 """
     query = f"""
         SELECT TOP {limit} 日期, 日本, 南韓, 香港, 新加坡, 上海, 舟山, y_lag_1, y_lag_2, y_lag_3, CPC
-        FROM aviation_prediction
+        FROM oil_prediction_shift
         WHERE 日期 {condition} %s
         ORDER BY 日期 DESC
     """
@@ -62,7 +62,7 @@ def insert_or_update(cursor, input_data):
             input_data[key] = None
 
     query_check = """
-        SELECT COUNT(*) FROM aviation_prediction WHERE 日期 = %s
+        SELECT COUNT(*) FROM oil_prediction_shift WHERE 日期 = %s
     """
     cursor.execute(query_check, (input_data["日期"],))
     exists = cursor.fetchone()[0] > 0  # 檢查是否有資料
@@ -79,7 +79,7 @@ def insert_or_update(cursor, input_data):
 
         if update_fields:
             query_update = f"""
-                UPDATE aviation_prediction
+                UPDATE oil_prediction_shift
                 SET {", ".join(update_fields)}
                 WHERE 日期 = %s
             """
@@ -100,7 +100,7 @@ def insert_or_update(cursor, input_data):
                 values.append(value)
 
         query_insert = f"""
-            INSERT INTO aviation_prediction ({", ".join(columns)})
+            INSERT INTO oil_prediction_shift ({", ".join(columns)})
             VALUES ({", ".join(values_placeholder)})
         """
         cursor.execute(query_insert, tuple(values))
@@ -123,7 +123,7 @@ def DB_update_null_values(cursor, conn, record):
         print("📌 平均值:",avg_value)
 
     update_query = f"""
-        UPDATE aviation_prediction
+        UPDATE oil_prediction_shift
         SET {", ".join(f"{col} = ISNULL({col}, %s)" for col in null_columns)}
         WHERE 日期 = %s
     """
@@ -158,7 +158,7 @@ def update_ylag(cursor, conn, latest, second_latest):
         return False  # 無需更新
 
     update_query = """
-        UPDATE aviation_prediction
+        UPDATE oil_prediction_shift
         SET y_lag_1 = %s, y_lag_2 = %s, y_lag_3 = %s
         WHERE 日期 = %s
     """    
@@ -168,7 +168,7 @@ def update_ylag(cursor, conn, latest, second_latest):
 
 def update_predictCPC(cursor, conn, predictCPC, latest):
     update_query = """
-        UPDATE aviation_prediction
+        UPDATE oil_prediction_shift
         SET predictCPC = %s
         WHERE 日期 = %s
     """    
@@ -275,7 +275,7 @@ def update():
 
             # **更新最新一筆的 CPC 值**
             query_update_cpc = """
-                UPDATE aviation_prediction
+                UPDATE oil_prediction_shift
                 SET CPC = %s
                 WHERE 日期 = %s
             """

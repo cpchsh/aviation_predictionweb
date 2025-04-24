@@ -24,15 +24,16 @@ def index():
 
     # 5) 呼叫獨立 service 查詢最近7筆紀錄
     rows = get_recent_7_records(filter_date=filter_date)
-    print("if_final_cpc", rows[0]['is_final_cpc'])
+    #print("if_final_cpc", rows[0]['is_final_cpc'])
 
     # 將 rows 轉成 pandas DataFrame, 產生 HTML
     if rows:
         df = pd.DataFrame(rows)
         # 調整欄位順序 (可選)
-        df = df[["日期","日本","南韓","香港","新加坡","上海","舟山","CPC","PredictedCPC","is_final_cpc"]]
+        #df = df[["日期","日本","南韓","香港","新加坡","上海","舟山","CPC","PredictedCPC","is_final_cpc"]]
+        df = df[["日期","日本","南韓","香港","新加坡","上海","舟山","CPC","predictCPC"]]
         df_html = df.to_html(classes="table table-bordered table-striped", index=False)
-        final_cpc = rows[0]['is_final_cpc']
+        #final_cpc = rows[0]['is_final_cpc']
     else:
         df_html = "<p>查無資料</p>"
 
@@ -58,7 +59,7 @@ def index():
         # prophet_fvalue=f_value,
         # future_table_html=future_table_html,
         table_html=df_html,
-        final_cpc = final_cpc,
+        #final_cpc = final_cpc,
         filter_date=filter_date,  # 讓前端可回填
         mae=mae_display,
         mape=mape_display,
