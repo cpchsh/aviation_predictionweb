@@ -1,0 +1,240 @@
+# """
+# 每天大約8點自動執行
+# 1)讀取資料庫最新日期latest_date
+# 2)若latest_date < 今天 -1，則補 yesterday的六港口 + CPC
+# 3)周末(六/日)自動跳過
+# """
+import os, sys, json, requests, logging
+from datetime import date, timedelta, datetime
+import pymssql
+from dotenv import load_dotenv; load_dotenv()
+import time
+import pandas as pd
+from app.routes.tukey_routes import predict_next_day_tukey
+
+DB_SERVER = os.getenv("DB_SERVER")
+DB_USER = os.getenv("DB_USER")
+DB_PWD = os.getenv("DB_PASSWORD")
+DB_NAME = os.getenv("DB_NAME")
+EIS_SERVER = os.getenv("EIS_SERVER")
+EIS_NAME = os.getenv("EIS_NAME")
+
+API_URL = "http://127.0.0.1:5000/update"
+LOG_FILE = "dailypushoil.log"
+
+logging.basicConfig(filename=LOG_FILE,
+                    level=logging.INFO,
+                    format="%(asctime)s %(levelname)s | %(message)s")
+
+def nz(v):    #None->""
+    return "" if v is None else v
+
+# 取得資料庫最新、次新日期
+def get_latest_two_dates():
+    """
+    回傳 (latest_date, second_latest_date)
+    若資料表只有 1 筆，second_latest 會是 None
+    """
+    sql = """
+        SELECT TOP 2 日期
+          FROM oil_prediction_shift
+         ORDER BY 日期 DESC
+    """
+    with pymssql.connect(server=DB_SERVER,
+                         user=DB_USER,
+                         password=DB_PWD,
+                         database=DB_NAME) as conn:
+        with conn.cursor(as_dict=True) as cur:
+            cur.execute(sql)
+            rows = cur.fetchall()               # 最多兩筆
+
+    latest   = rows[0]["日期"] if rows else None
+    second   = rows[1]["日期"] if len(rows) > 1 else None
+    return latest, second
+
+        
+
+# 取得昨日報價
+def fetch_yesterday_prices(ydate: date) -> dict | None:
+    dummy = {
+        "日本": 700.0,
+        "南韓": 702.5,
+        "香港": 698.0,
+        "新加坡": 699.0,
+        "上海": 700.0,
+        "舟山": 701.1,
+        "CPC": 720.0
+    }
+    return dummy
+
+
+# post 到 update
+def post_to_update(payload: dict) -> bool:
+    try:
+        r = requests.post(API_URL, data=payload, timeout=15)
+        r.raise_for_status()
+        resp = r.json()
+        logging.info("POST OK %s -> %s", payload["date"], resp.get("status"))
+        return resp.get("status") in ("insert_success", "update_success")
+    except Exception as e:
+        logging.error("POST FAIL %s | %s", payload.get("date"), e)
+        return False
+
+
+def get_price_for_date(d: date) -> dict | None:
+    sql = """
+        SELECT [DATE], [NAME], [CLOSE]
+        FROM dbo.MARKET_DATA
+        WHERE [DATE] = %s
+        AND [NAME] LIKE '%%MarineFuel%%'
+    """
+
+    # 1. 連線和查詢
+    with pymssql.connect(server=EIS_SERVER,
+                         user=DB_USER,
+                         password=DB_PWD,
+                         database=EIS_NAME) as conn:
+        df = pd.read_sql(sql, conn, params=(d,))
+
+    # 2. 無資料 -> None
+    if df.empty:
+        return None
+    # 3. 轉寬表
+    df = (
+        df.pivot(index='DATE', columns='NAME', values='CLOSE').sort_index(axis=1)
+    )
+
+    # 4. 重新命名(依照固定順序)
+    df.columns = ['CPC', '香港', '日本', '上海', '新加坡', '南韓', '舟山']
+
+    rec = df.iloc[0].to_dict()
+
+    # 5. 若CPC為NAN/None -> 視為假日/跳過
+    if pd.isna(rec["CPC"]):
+        return None
+    # 6. 把NaN轉None, float化
+    return {k: (None if pd.isna(v) else float(v)) for k, v in rec.items()}
+
+
+def main():
+    latest, _ = get_latest_two_dates()
+    if latest is None:
+        logging.error("DB 無任何資料，結束")
+        return
+
+    today = date.today()
+    ports_day = latest + timedelta(days=1)
+
+    # ---------- A. 找下一個有「六港口」資料的日期 ----------
+    while ports_day < today:
+        ports_price = get_price_for_date(ports_day)
+        if ports_price is not None:
+            break
+        logging.info("%s 無六港口報價，跳過", ports_day)
+        ports_day += timedelta(days=1)
+
+    # 已追到今天還是沒有資料 → 結束
+    if ports_day >= today:
+        logging.info("無可補的六港口資料")
+        return
+
+    # ---------- B. 找之後第一個有 CPC 的日期 ----------
+    cpc_day = ports_day + timedelta(days=1)
+    cpc_price = None
+    while cpc_day <= today:
+        tmp = get_price_for_date(cpc_day)
+        if tmp and tmp["CPC"] is not None:
+            cpc_price = tmp["CPC"]
+            break
+        cpc_day += timedelta(days=1)
+
+    # ---------- C. 先寫 ports_day 的六港口 ----------
+    port_payload = {
+        "date": ports_day.strftime("%Y-%m-%d"),
+        "japan": nz(ports_price["日本"]),
+        "korea": nz(ports_price["南韓"]),
+        "hongkong": nz(ports_price["香港"]),
+        "singapore": nz(ports_price["新加坡"]),
+        "shanghai": nz(ports_price["上海"]),
+        "zhoushan": nz(ports_price["舟山"]),
+        "cpc": ""
+    }
+    if not post_to_update(port_payload):
+        logging.error("六港口寫入失敗 %s，結束", ports_day)
+        return
+    logging.info("六港口已寫入 %s", ports_day)
+
+    next_day_tukey = predict_next_day_tukey()
+    print("next day predcit", next_day_tukey)
+
+    # ---------- D. 若找得到 CPC，再寫一次 ports_day 的 CPC ----------
+    if cpc_price is None:
+        logging.info("到 %s 仍無 CPC，可等待下次排程再補", today)
+        return
+
+    time.sleep(5)        # 等 Tukey 資料庫解鎖
+
+    cpc_payload = {
+        "date": ports_day.strftime("%Y-%m-%d"),   # 寫在 ports_day 那列
+        "japan":"","korea":"","hongkong":"","singapore":"",
+        "shanghai":"","zhoushan":"",
+        "cpc": cpc_price
+    }
+    if post_to_update(cpc_payload):
+        logging.info("CPC(%s) 已寫入 %s", cpc_day, ports_day)
+
+
+
+# # 主流程
+# def main():
+#     latest_date, second_date = get_latest_two_dates()
+#     if not latest_date:
+#         logging.error("資料庫沒有任何資料，程式結束")
+#         return
+#     today = date.today()
+#     target = latest_date + timedelta(days=1)
+#     cpc_price = get_price_for_date(latest_date)
+
+#     # 最多嘗試往後找20天，直到找到有CPC的日子
+#     for _ in range(20):
+#         if target >= today:
+#             logging.info("已追平或超前今天，結束")
+#             return
+        
+#         price = get_price_for_date(target)
+        
+#         if price is None:
+#             logging.info("%s 無CPC，跳過", target)
+#             target += timedelta(days=1)
+#             continue # 再找下一天
+
+        
+
+#         # --------送六港口--------
+#         port_payload = {
+#             "date": target.strftime("%Y-%m-%d"),
+#             "japan": nz(price["日本"]), "korea" : nz(price["南韓"]),
+#             "hongkong": nz(price["香港"]), "singapore": nz(price["新加坡"]),
+#             "shanghai": nz(price["上海"]), "zhoushan": nz(price["舟山"]),
+#             "cpc": ""
+#         }
+#         if not post_to_update(port_payload):
+#             logging.info("六港口寫入失敗 %s，結束", target)
+#             return
+#         time.sleep(5)
+
+#         # -------送CPC-----------
+#         cpc_payload = {
+#             "date": target.strftime("%Y-%m-%d"),
+#             "japan":"", "korea":"", "hongkong":"", "singapore":"",
+#             "shanghai":"","zhoushan":"",
+#             "cpc": cpc_price["CPC"]
+#         }
+#         if post_to_update(cpc_payload):
+#             logging.info("已成功補齊 %s", target)
+
+        
+#         return 
+
+if __name__ == "__main__":
+    main()
