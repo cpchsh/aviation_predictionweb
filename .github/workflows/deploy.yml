@@ -56,6 +56,8 @@ jobs:
             -e DB_USER=$DB_USER \
             -e DB_PASSWORD=$DB_PASSWORD \
             -e DB_NAME=$DB_NAME \
+            -e EIS_NAME=$EIS_NAME \
+            -e EIS_SERVER=$EIS_SERVER \
             -v /home/dockeruser/aviation_predictionweb/xgb_models:/shared_volume \
             python312:v1.0.01
 
