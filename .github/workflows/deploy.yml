@@ -77,6 +77,7 @@ jobs:
           docker run -d --name oil-cron-container \
             -e DB_SERVER=$DB_SERVER -e DB_USER=$DB_USER \
             -e DB_PASSWORD=$DB_PASSWORD -e DB_NAME=$DB_NAME \
+            -e EIS_SERVER=$EIS_SERVER -e EIS_NAME=$EIS_NAME \
             oil-cron:v1.0.01
 
       #### C. 清理懸空映像(共用)
