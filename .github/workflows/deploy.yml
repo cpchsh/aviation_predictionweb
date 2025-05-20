@@ -30,7 +30,7 @@ jobs:
       - name: Sync Latest Code to Remote Directory
         run: |
           mkdir -p ~/aviation_predictionweb
-          rsync -av --delete --exclude '*.csv' --exclude '.env' --exclude '*.sh' --exclude 'xgb_models' "$GITHUB_WORKSPACE"/ ~/aviation_predictionweb/
+          rsync -av --delete --exclude '*.csv' --exclude '.env' --exclude '.ven' --exclude '*.sh' --exclude 'xgb_models' "$GITHUB_WORKSPACE"/ ~/aviation_predictionweb/
 
       #### A. Flask
       - name: Build Flask Image
