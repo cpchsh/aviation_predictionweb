@@ -1,9 +1,3 @@
-# """
-# 每天大約8點自動執行
-# 1)讀取資料庫最新日期latest_date
-# 2)若latest_date < 今天 -1，則補 yesterday的六港口 + CPC
-# 3)周末(六/日)自動跳過
-# """
 import os, sys, json, requests, logging
 from datetime import date, timedelta, datetime
 import pymssql
@@ -11,6 +5,8 @@ from dotenv import load_dotenv; load_dotenv()
 import time
 import pandas as pd
 from app.routes.tukey_routes import predict_next_day_tukey
+# 自訂的 function, service
+from app.services.db_service import get_error_metrics, save_error_metrics_to_db
 
 DB_SERVER = os.getenv("DB_SERVER")
 DB_USER = os.getenv("DB_USER")
@@ -19,7 +15,7 @@ DB_NAME = os.getenv("DB_NAME")
 EIS_SERVER = os.getenv("EIS_SERVER")
 EIS_NAME = os.getenv("EIS_NAME")
 
-API_URL = "http://127.0.0.1:5000/update"
+API_URL = "http://10.168.230.33:5001/update"
 LOG_FILE = "dailypushoil.log"
 
 logging.basicConfig(filename=LOG_FILE,
@@ -84,36 +80,84 @@ def post_to_update(payload: dict) -> bool:
 def get_price_for_date(d: date) -> dict | None:
     sql = """
         SELECT [DATE], [NAME], [CLOSE]
-        FROM dbo.MARKET_DATA
-        WHERE [DATE] = %s
-        AND [NAME] LIKE '%%MarineFuel%%'
+          FROM dbo.MARKET_DATA
+         WHERE [DATE] = %s AND [NAME] LIKE '%%MarineFuel%%'
     """
 
-    # 1. 連線和查詢
     with pymssql.connect(server=EIS_SERVER,
                          user=DB_USER,
                          password=DB_PWD,
                          database=EIS_NAME) as conn:
         df = pd.read_sql(sql, conn, params=(d,))
 
-    # 2. 無資料 -> None
-    if df.empty:
+    if df.empty:                         # 沒任何報價
         return None
-    # 3. 轉寬表
-    df = (
-        df.pivot(index='DATE', columns='NAME', values='CLOSE').sort_index(axis=1)
-    )
 
-    # 4. 重新命名(依照固定順序)
-    df.columns = ['CPC', '香港', '日本', '上海', '新加坡', '南韓', '舟山']
+    df = (df.pivot(index='DATE', columns='NAME', values='CLOSE')
+            .sort_index(axis=1))
 
-    rec = df.iloc[0].to_dict()
+    # 映射原始 NAME → 中文欄
+    name_map = {
+        'MarineFuel_CPC'      : 'CPC',
+        'MarineFuel_HongKong' : '香港',
+        'MarineFuel_Japan'    : '日本',
+        'MarineFuel_Shanghai' : '上海',
+        'MarineFuel_Singapore': '新加坡',
+        'MarineFuel_SouthKorea'    : '南韓',
+        'MarineFuel_Zhoushan' : '舟山'
+    }
 
-    # 5. 若CPC為NAN/None -> 視為假日/跳過
-    if pd.isna(rec["CPC"]):
+    # 只對存在的欄位 rename
+    exist_cols = {col: name_map[col] for col in df.columns if col in name_map}
+    df = df.rename(columns=exist_cols)
+
+    rec_raw = df.iloc[0].to_dict()       # e.g. 只有 {'CPC': 720}
+
+    # 若 CPC 缺失視為假日
+    if 'CPC' not in rec_raw or pd.isna(rec_raw['CPC']):
         return None
-    # 6. 把NaN轉None, float化
-    return {k: (None if pd.isna(v) else float(v)) for k, v in rec.items()}
+
+    # 建立完整欄位 dict，缺欄一律 None
+    blank = {'CPC': None, '香港': None, '日本': None,
+             '上海': None, '新加坡': None, '南韓': None, '舟山': None}
+    for k, v in rec_raw.items():
+        blank[k] = None if pd.isna(v) else float(v)
+
+    return blank       
+
+# def get_price_for_date(d: date) -> dict | None:
+#     sql = """
+#         SELECT [DATE], [NAME], [CLOSE]
+#         FROM dbo.MARKET_DATA
+#         WHERE [DATE] = %s
+#         AND [NAME] LIKE '%%MarineFuel%%'
+#     """
+
+#     # 1. 連線和查詢
+#     with pymssql.connect(server=EIS_SERVER,
+#                          user=DB_USER,
+#                          password=DB_PWD,
+#                          database=EIS_NAME) as conn:
+#         df = pd.read_sql(sql, conn, params=(d,))
+
+#     # 2. 無資料 -> None
+#     if df.empty:
+#         return None
+#     # 3. 轉寬表
+#     df = (
+#         df.pivot(index='DATE', columns='NAME', values='CLOSE').sort_index(axis=1)
+#     )
+
+#     # 4. 重新命名(依照固定順序)
+#     df.columns = ['CPC', '香港', '日本', '上海', '新加坡', '南韓', '舟山']
+
+#     rec = df.iloc[0].to_dict()
+
+#     # 5. 若CPC為NAN/None -> 視為假日/跳過
+#     if pd.isna(rec["CPC"]):
+#         return None
+#     # 6. 把NaN轉None, float化
+#     return {k: (None if pd.isna(v) else float(v)) for k, v in rec.items()}
 
 
 def main():
@@ -166,6 +210,12 @@ def main():
 
     next_day_tukey = predict_next_day_tukey()
     print("next day predcit", next_day_tukey)
+
+    # 誤差指標寫入
+    mae, mape, rmse = get_error_metrics()
+    if mae is not None and mape is not None and rmse is not None:
+        save_error_metrics_to_db(ports_day, mae, mape, rmse)
+        print(f"[INFO] Update the day {ports_day}'s metrics: MAE={mae}, MAPE={mape}, RMSE={rmse}")
 
     # ---------- D. 若找得到 CPC，再寫一次 ports_day 的 CPC ----------
     if cpc_price is None:

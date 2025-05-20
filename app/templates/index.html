@@ -10,7 +10,6 @@
 </div>
 
 <div class="container my-4">
-  <!-- XGB 預測結果 -->
   <div class="card mb-4">
     <div class="card-body">
       <h2 class="card-title">
@@ -19,6 +18,11 @@
       <p class="card-text text-danger fs-5">預測值: <b>{{ tukey_pred }}</b></p>
       <!-- <a href="/tukey_form" class="btn">自訂輸入</a>
       <a href="/tukey_form_noDate" class="btn">自訂輸入(不含日期)</a> -->
+      <p> 目前統計:
+        <br>RMSE=<b>{{ rmse }}</b>
+        <br>MAPE=<b>{{ mape }}%</b>
+        <br>模型已於<span id="reTrainTimeDisplay">讀取中...</span>重新訓練</b>
+      </p>
     </div>
   </div>
 
@@ -451,11 +455,11 @@
   function initRmseChart(metricsData){
     const ctx = document.getElementById("historicalRmseChart").getContext("2d");
     const labels = metricsData.map(d => {
-      const t = new Date(d.timestamp);
+      const t = new Date(d.ds);
       return t.toLocaleDateString();
     });
 
-    const dataPoints = metricsData.map(d => d.RMSE);
+    const dataPoints = metricsData.map(d => d.rmse);
 
     new Chart(ctx, {
       type: "line",
@@ -501,12 +505,12 @@
     const ctx = document.getElementById("historicalMapeChart").getContext("2d");
 
     const labels = metricsData.map(d => {
-      const t = new Date(d.timestamp);
+      const t = new Date(d.ds);
       return t.toLocaleString();
     });
 
     // 2)取出MAPE當成y值
-    const dataPoints = metricsData.map(d => d.MAPE)
+    const dataPoints = metricsData.map(d => d.mape)
 
     new Chart(ctx, {
       type: "line",

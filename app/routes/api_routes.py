@@ -185,7 +185,7 @@ def get_historical_alldata():
 @api_bp.route("/api/metrics_data", methods=["GET"])
 def get_metrics_data():
     """
-    從資料表 oooiiilll_newmetrics 撈出 timestamp, MAE, MAPE, 並以 JSON 格式返回
+    從資料表 oil_prediction_shift 撈出 timestamp, MAE, MAPE, 並以 JSON 格式返回
     讓前端 chart.js 可直接使用
     """
     conn = pymssql.connect(server=DB_SERVER, user=DB_USER, password=DB_PASSWORD, database=DB_NAME)
@@ -193,9 +193,10 @@ def get_metrics_data():
 
     try:
         query = """
-            SELECT timestamp, MAE, MAPE, RMSE
-            FROM oooiiilll_newmetrics
-            ORDER BY timestamp
+            SELECT 日期 AS ds, mae, mape, rmse
+            FROM oil_prediction_shift
+            WHERE rmse IS NOT NULL
+            ORDER BY 日期
         """
         cursor.execute(query)
         rows = cursor.fetchall() # list of dict, 每筆資料是個 dict
@@ -204,14 +205,14 @@ def get_metrics_data():
         # 轉換日期格式
         for row in rows:
             # 1) 取得原本的timestamp
-            ts = row["timestamp"]
-            mae_val = row["MAE"]
-            mape_val = row["MAPE"]
-            rmse_val = row["RMSE"]
+            ts = row["ds"]
+            mae_val = row["mae"]
+            mape_val = row["mape"]
+            rmse_val = row["rmse"]
 
             # 2) 若 ts 是 datetime, 轉成字串
             if isinstance(ts, (datetime, date)):
-                ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
+                ts_str = ts.strftime("%Y-%m-%d")
             else:
                 ts_str = str(ts)
 
@@ -224,7 +225,7 @@ def get_metrics_data():
             })
 
         # 直接以 JSON 格式回傳
-        return jsonify(rows)
+        return jsonify(results)
     except Exception as e:
         print("get_metrics_data 發生錯誤:", e)
         # 可回傳錯誤訊息或空資料

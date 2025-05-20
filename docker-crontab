@@ -1,0 +1,3 @@
+PATH=/usr/local/bin:/usr/bin:/bin
+# 每 1 分鐘執行一次 dailypushoil.py
+* * * * * python /app/dailypushoil.py >> /var/log/dailypushoil.log 2>&1
