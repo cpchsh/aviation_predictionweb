@@ -2,7 +2,6 @@
 import os
 import pymssql
 from dotenv import load_dotenv
-import joblib
 import math
 from datetime import date
 
@@ -12,8 +11,8 @@ DB_USER     = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_NAME     = os.getenv("DB_NAME")
 
-xgb_model_path = "./xgb_models/xgb_model.pkl"
-xgb_model = joblib.load(xgb_model_path)
+#xgb_model_path = "./xgb_models/xgb_model.pkl"
+#xgb_model = joblib.load(xgb_model_path)
 
 # def get_recent_7_records(filter_date=None):
 #     """
