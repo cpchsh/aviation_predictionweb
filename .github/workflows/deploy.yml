@@ -17,6 +17,8 @@ jobs:
       DB_USER: ${{ secrets.DB_USER }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       DB_NAME: ${{ secrets.DB_NAME }}
+      EIS_SERVER: ${{ secrets.EIS_SERVER }}
+      EIS_NAME: ${{ secrets.EIS_NAME }}
 
     steps:
       # 1. 取用程式碼
