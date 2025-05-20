@@ -12,5 +12,5 @@ echo "[INFO] Installed crontab ==="
 cat /etc/cron.d/app-cron
 echo "============================"
 
-#3. 前景模式跑cron
+#3. 前景模式下跑cron
 exec cron -f
