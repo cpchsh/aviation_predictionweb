@@ -1,3 +1,11 @@
 PATH=/usr/local/bin:/usr/bin:/bin
+
+DB_SERVER=${DB_SERVER}
+DB_USER=${DB_USER}
+DB_PASSWORD=${DB_PASSWORD}
+DB_NAME=${DB_NAME}
+EIS_SERVER=${EIS_SERVER}
+EIS_NAME=${EIS_NAME}
+
 # 每 1 分鐘執行一次 dailypushoil.py
 * * * * * python /app/dailypushoil.py >> /var/log/dailypushoil.log 2>&1
