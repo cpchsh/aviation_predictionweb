@@ -32,7 +32,7 @@ COPY docker-crontab.tmpl /etc/cron.d/app-cron.tmpl
 COPY start-cron.sh /start-cron.sh
 RUN chmod +x /start-cron.sh
 
-CMD ["cron", "-f"]
+CMD ["/start-cron.sh"]
 
 # #############################
 # #  dailypushoil  – cron job #
