@@ -199,6 +199,15 @@ def main():
         "zhoushan": nz(ports_price["舟山"]),
         "cpc": ""
     }
+
+    next_day_tukey = predict_next_day_tukey()
+    print("next day predcit", next_day_tukey)
+
+    # 誤差指標寫入
+    mae, mape, rmse = get_error_metrics()
+    if mae is not None and mape is not None and rmse is not None:
+        save_error_metrics_to_db(ports_day, mae, mape, rmse)
+        print(f"[INFO] Update the day {ports_day}'s metrics: MAE={mae}, MAPE={mape}, RMSE={rmse}")
     if post_to_update(payload):
         logging.info("已寫入 %s 的六港口報價", ports_day)
 
