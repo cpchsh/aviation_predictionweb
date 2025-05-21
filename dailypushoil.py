@@ -10,7 +10,7 @@ from app.services.db_service import get_error_metrics, save_error_metrics_to_db
 
 DB_SERVER = os.getenv("DB_SERVER")
 DB_USER = os.getenv("DB_USER")
-DB_PWD = os.getenv("DB_PASSWORD")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_NAME = os.getenv("DB_NAME")
 EIS_SERVER = os.getenv("EIS_SERVER")
 EIS_NAME = os.getenv("EIS_NAME")
@@ -38,7 +38,7 @@ def get_latest_two_dates():
     """
     with pymssql.connect(server=DB_SERVER,
                          user=DB_USER,
-                         password=DB_PWD,
+                         password=DB_PASSWORD,
                          database=DB_NAME) as conn:
         with conn.cursor(as_dict=True) as cur:
             cur.execute(sql)
@@ -86,7 +86,7 @@ def get_price_for_date(d: date) -> dict | None:
 
     with pymssql.connect(server=EIS_SERVER,
                          user=DB_USER,
-                         password=DB_PWD,
+                         password=DB_PASSWORD,
                          database=EIS_NAME) as conn:
         df = pd.read_sql(sql, conn, params=(d,))
 
@@ -138,7 +138,7 @@ def main():
     need_cpc = False
     need_ports = False
     with pymssql.connect(server=DB_SERVER, user=DB_USER,
-                         password=DB_PWD, database=DB_NAME) as conn:
+                         password=DB_PASSWORD, database=DB_NAME) as conn:
         with conn.cursor(as_dict=True) as cur:
             cur.execute("SELECT * FROM oil_prediction_shift WHERE 日期=%s", (latest_date,))
             row_latest = cur.fetchone()
