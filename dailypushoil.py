@@ -4,7 +4,7 @@ import pymssql
 from dotenv import load_dotenv; load_dotenv()
 import time
 import pandas as pd
-from app.routes.tukey_routes import predict_next_day_tukey
+from app.routes.tukey_routes import predict_next_day_tukey, update_ylag
 # 自訂的 function, service
 from app.services.db_service import get_error_metrics, save_error_metrics_to_db
 
@@ -63,6 +63,35 @@ def fetch_yesterday_prices(ydate: date) -> dict | None:
     }
     return dummy
 
+def update_ylag_for_latest(the_date: date):
+    with pymssql.connect(server=DB_SERVER, user=DB_USER,
+                         password=DB_PASSWORD, database=DB_NAME) as conn:
+        with conn.cursor(as_dict=True) as cur:
+
+            # 找 second_latest ↓↓↓
+            cur.execute("""
+               SELECT TOP 1 CPC, y_lag_1, y_lag_2
+               FROM LSMF_Prediction
+               WHERE 日期 < %s
+               ORDER BY 日期 DESC
+            """, (the_date,))
+            row = cur.fetchone()
+            if row is None or row["CPC"] is None:
+                logging.warning("找不到 %s 之前可用的 CPC，ylag 不更新", the_date)
+                return False
+
+            cur.execute("""
+               UPDATE LSMF_Prediction
+                  SET y_lag_1 = %s,
+                      y_lag_2 = %s,
+                      y_lag_3 = %s
+                WHERE 日期 = %s
+            """, (row["CPC"], row["y_lag_1"], row["y_lag_2"], the_date))
+            conn.commit()
+            logging.info("已更新 %s 的 y-lag", the_date)
+            return True
+
+
 
 # post 到 update
 def post_to_update(payload: dict) -> bool:
@@ -104,6 +133,16 @@ def post_to_update(payload: dict) -> bool:
 
         # --- B.CPC更新 -> 指標計算 ---
         if ok and is_cpc_update:
+            # 1) y-lag 遞移
+            if update_ylag_for_latest(datetime.strptime(payload["date"], "%Y-%m-%d").date()):
+                logging.info("CPC 更新後已同步 y-lag")
+
+            # 2) Tukey 預測（現在最新列完整了）
+            pred = predict_next_day_tukey()
+            if pred:
+                logging.info("Tukey 預測完成: %s -> %.2f", pred[0], pred[1])
+
+            # 3) 計算誤差指標
             mae, mape, rmse = get_error_metrics()
             if None not in (mae, mape, rmse):
                 # payload["date"] 是 'YYYY-MM-DD' 字串 -> 轉成 date 物件
