@@ -33,7 +33,7 @@ def get_latest_two_dates():
     """
     sql = """
         SELECT TOP 2 日期
-          FROM oil_prediction_shift
+          FROM LSMF_Prediction
          ORDER BY 日期 DESC
     """
     with pymssql.connect(server=DB_SERVER,
@@ -79,7 +79,10 @@ def post_to_update(payload: dict) -> bool:
         resp = r.json()
 
         ok = resp.get("status") in ("insert_success", "update_success")
-        logging.info("POST OK %s -> %s", payload["date"], resp.get("status"))
+        logging.info("POST OK %s -> %s - %s",
+             payload["date"],
+             resp.get("status"),
+             resp.get("message"))       
 
         # --- 判斷兩種情況 ---
         has_cpc = bool(payload.get("cpc"))
@@ -178,7 +181,7 @@ def main():
     with pymssql.connect(server=DB_SERVER, user=DB_USER,
                          password=DB_PASSWORD, database=DB_NAME) as conn:
         with conn.cursor(as_dict=True) as cur:
-            cur.execute("SELECT * FROM oil_prediction_shift WHERE 日期=%s", (latest_date,))
+            cur.execute("SELECT * FROM LSMF_Prediction WHERE 日期=%s", (latest_date,))
             row_latest = cur.fetchone()
             if row_latest is None:
                 logging.error("找不到最新列？")
@@ -238,8 +241,8 @@ def main():
         "cpc": ""
     }
 
-    next_day_tukey = predict_next_day_tukey()
-    print("next day predcit", next_day_tukey)
+    # next_day_tukey = predict_next_day_tukey()
+    # print("next day predcit", next_day_tukey)
 
     # # 誤差指標寫入
     # mae, mape, rmse = get_error_metrics()

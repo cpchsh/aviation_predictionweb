@@ -378,7 +378,7 @@ FROM
     -- 再取最新 7 筆原始資料
     SELECT TOP 7
         日期, [日本], [南韓], [香港], [新加坡], [上海], [舟山]
-    FROM oil_prediction_shift
+    FROM LSMF_Prediction
     {where_clause}
     ORDER BY 日期 DESC
 ) AS T0
@@ -388,7 +388,7 @@ OUTER APPLY
     SELECT TOP 1
         t.CPC,
         t.predictCPC
-    FROM oil_prediction_shift AS t
+    FROM LSMF_Prediction AS t
     WHERE t.日期 < T0.日期
     ORDER BY t.日期 DESC
 ) AS X
@@ -415,7 +415,7 @@ ORDER BY T0.日期 DESC;
 
 def get_error_metrics():
     """
-    從資料表 oil_prediction_shift 中撈出 CPC, predictCPC 不為 NULL 的紀錄，
+    從資料表 LSMF_Prediction 中撈出 CPC, predictCPC 不為 NULL 的紀錄，
     計算 MAE, MAPE, RMSE 並回傳 (mae, mape, rmse)，皆為 float 或 None
     """
     conn = pymssql.connect(server=DB_SERVER, user=DB_USER,
@@ -424,7 +424,7 @@ def get_error_metrics():
     try:
         sql = """
               SELECT CPC, predictCPC
-              FROM oil_prediction_shift
+              FROM LSMF_Prediction
               WHERE CPC IS NOT NULL
               AND predictCPC IS NOT NULL  
         """
@@ -482,7 +482,7 @@ def save_error_metrics_to_db(date, mae, mape, rmse):
     cursor = conn.cursor()
     try:
         sql = """
-          UPDATE oil_prediction_shift 
+          UPDATE LSMF_Prediction 
           SET mae = %s, mape = %s, rmse = %s
           where 日期 = %s
         """

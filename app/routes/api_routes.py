@@ -64,7 +64,7 @@ def get_historical_data():
                 日期 AS ds,
                 CPC AS y,
                 predictCPC AS y_pred
-            FROM oil_prediction_shift
+            FROM LSMF_Prediction
 
             ORDER BY 日期
         """
@@ -136,7 +136,7 @@ def get_historical_alldata():
 				舟山 AS zhoushan,
                 CPC AS y,
                 predictCPC AS y_pred
-            FROM oil_prediction_shift
+            FROM LSMF_Prediction
 
             ORDER BY 日期
         """
@@ -185,7 +185,7 @@ def get_historical_alldata():
 @api_bp.route("/api/metrics_data", methods=["GET"])
 def get_metrics_data():
     """
-    從資料表 oil_prediction_shift 撈出 timestamp, MAE, MAPE, 並以 JSON 格式返回
+    從資料表 LSMF_Prediction 撈出 timestamp, MAE, MAPE, 並以 JSON 格式返回
     讓前端 chart.js 可直接使用
     """
     conn = pymssql.connect(server=DB_SERVER, user=DB_USER, password=DB_PASSWORD, database=DB_NAME)
@@ -194,7 +194,7 @@ def get_metrics_data():
     try:
         query = """
             SELECT 日期 AS ds, mae, mape, rmse
-            FROM oil_prediction_shift
+            FROM LSMF_Prediction
             WHERE rmse IS NOT NULL
             ORDER BY 日期
         """

@@ -31,7 +31,7 @@ def get_latest_date():
     with pymssql.connect(server=DB_SERVER, user=DB_USER,
                          password=DB_PWD, database=DB_NAME) as conn:
         with conn.cursor(as_dict=True) as cur:
-            cur.execute("SELECT MAX(日期) AS d FROM oil_prediction_shift")
+            cur.execute("SELECT MAX(日期) AS d FROM LSMF_Prediction")
             return cur.fetchone()["d"]
 
 # ---------- 報價來源 (請換成真資料或 API) ----------

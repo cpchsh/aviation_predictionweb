@@ -488,3 +488,17 @@
 2025-05-23 11:28:39,486 INFO | POST OK 2025-05-06 -> insert_success
 2025-05-23 11:28:39,565 INFO | Error metrics 寫入 : 2025-05-06 MAE=4.1706 MAPE=0.81 RMSE=6.6661
 2025-05-23 11:28:39,566 INFO | 填補完成：2025-05-06 的 CPC = 511.00
+2025-05-23 14:15:12,158 INFO | POST OK 2025-04-30 -> error
+2025-05-23 14:15:42,046 INFO | POST OK 2025-04-30 -> error
+2025-05-23 14:20:52,685 INFO | POST OK 2025-04-30 -> error
+2025-05-23 14:29:41,574 INFO | POST OK 2025-04-30 -> error
+2025-05-23 14:42:10,428 INFO | POST OK 2025-04-30 -> error - \u274c 日期不可比2025-05-22還小
+2025-05-23 14:49:13,068 INFO | POST OK 2025-04-30 -> error - \u274c 日期不可比2025-05-22還小
+2025-05-23 14:49:26,884 INFO | POST OK 2025-04-30 -> error - \u274c 日期不可比2025-05-22還小
+2025-05-23 14:56:58,670 ERROR | POST FAIL 2025-04-30 | HTTPConnectionPool(host='localhost', port=80): Max retries exceeded with url: /update (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002074D748D70>: Failed to establish a new connection: [WinError 10061] 無法連線，因為目標電腦拒絕連線。'))
+2025-05-23 14:57:47,360 INFO | POST OK 2025-04-30 -> insert_success - \u2705 插入成功
+2025-05-23 14:57:47,658 INFO | Tukey 預測完成: 2025-05-23 -> 514.66
+2025-05-23 14:57:47,659 INFO | 已寫入 2025-04-30 的六港口報價
+2025-05-23 14:58:10,222 INFO | POST OK 2025-04-30 -> insert_success - \u2705 已更新決策的 CPC 值為 506.0
+2025-05-23 14:58:10,296 INFO | Error metrics 寫入 : 2025-04-30 MAE=9.1250 MAPE=1.78 RMSE=9.1368
+2025-05-23 14:58:10,296 INFO | 填補完成：2025-04-30 的 CPC = 506.00
