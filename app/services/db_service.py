@@ -2,7 +2,6 @@
 import os
 import pymssql
 from dotenv import load_dotenv
-import joblib
 import math
 from datetime import date
 
@@ -12,8 +11,8 @@ DB_USER     = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_NAME     = os.getenv("DB_NAME")
 
-xgb_model_path = "./xgb_models/xgb_model.pkl"
-xgb_model = joblib.load(xgb_model_path)
+#xgb_model_path = "./xgb_models/xgb_model.pkl"
+#xgb_model = joblib.load(xgb_model_path)
 
 # def get_recent_7_records(filter_date=None):
 #     """
@@ -379,7 +378,7 @@ FROM
     -- 再取最新 7 筆原始資料
     SELECT TOP 7
         日期, [日本], [南韓], [香港], [新加坡], [上海], [舟山]
-    FROM oil_prediction_shift
+    FROM LSMF_Prediction
     {where_clause}
     ORDER BY 日期 DESC
 ) AS T0
@@ -389,7 +388,7 @@ OUTER APPLY
     SELECT TOP 1
         t.CPC,
         t.predictCPC
-    FROM oil_prediction_shift AS t
+    FROM LSMF_Prediction AS t
     WHERE t.日期 < T0.日期
     ORDER BY t.日期 DESC
 ) AS X
@@ -416,7 +415,7 @@ ORDER BY T0.日期 DESC;
 
 def get_error_metrics():
     """
-    從資料表 oooiiilll_new 中撈出 CPC, PredictedCPC 不為 NULL 的紀錄，
+    從資料表 LSMF_Prediction 中撈出 CPC, predictCPC 不為 NULL 的紀錄，
     計算 MAE, MAPE, RMSE 並回傳 (mae, mape, rmse)，皆為 float 或 None
     """
     conn = pymssql.connect(server=DB_SERVER, user=DB_USER,
@@ -424,15 +423,15 @@ def get_error_metrics():
     cursor = conn.cursor(as_dict=True)
     try:
         sql = """
-              SELECT CPC, PredictedCPC
-              FROM oooiiilll_new
+              SELECT CPC, predictCPC
+              FROM LSMF_Prediction
               WHERE CPC IS NOT NULL
-              AND PredictedCPC IS NOT NULL  
+              AND predictCPC IS NOT NULL  
         """
         cursor.execute(sql)
         rows = cursor.fetchall()
         if not rows:
-            print("[INFO] 沒有任何 CPC, PredictedCPC 同時存在的資料，無法計算誤差")
+            print("[INFO] 沒有任何 CPC, predictCPC 同時存在的資料，無法計算誤差")
             return None, None, None
         
         abs_errors = []
@@ -441,7 +440,7 @@ def get_error_metrics():
         
         for row in rows:
             actual = row["CPC"]
-            pred = row["PredictedCPC"]
+            pred = row["predictCPC"]
             if actual is None or pred is None:
                 continue
             if actual == 0:
@@ -473,23 +472,23 @@ def get_error_metrics():
         conn.close()
 
 
-def save_error_metrics_to_db(mae, mape, rmse):
+def save_error_metrics_to_db(date, mae, mape, rmse):
     """
-    將 mae, mape, rmse 寫入資料表 oooiiilll_newmetrics
-      欄位: timestamp(datetime), MAE(float), MAPE(float), RMSE(float)
-    使用 GETDATE() 取得資料庫當下時間
+    將 mae, mape, rmse 寫入資料表 
+      欄位:mae(float), mape(float), rmse(float)
     """
     conn = pymssql.connect(server=DB_SERVER, user=DB_USER,
                            password=DB_PASSWORD, database=DB_NAME)
     cursor = conn.cursor()
     try:
         sql = """
-          INSERT INTO oooiiilll_newmetrics ([timestamp], [MAE], [MAPE], [RMSE])
-          VALUES (GETDATE(), %s, %s, %s)
+          UPDATE LSMF_Prediction 
+          SET mae = %s, mape = %s, rmse = %s
+          where 日期 = %s
         """
-        cursor.execute(sql, (mae, mape, rmse))
+        cursor.execute(sql, (mae, mape, rmse, date))
         conn.commit()
-        print(f"[INFO] 已插入 oooiiilll_newmetrics: MAE={mae}, MAPE={mape}, RMSE={rmse}")
+        print(f"[INFO] 已更新{date} 的mae={mae}, mape={mape}, rmse={rmse}")
     except Exception as e:
         print("save_error_metrics_to_db 錯誤:", e)
     finally:

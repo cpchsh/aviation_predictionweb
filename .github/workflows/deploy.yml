@@ -17,51 +17,70 @@ jobs:
       DB_USER: ${{ secrets.DB_USER }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       DB_NAME: ${{ secrets.DB_NAME }}
+      EIS_SERVER: ${{ secrets.EIS_SERVER }}
+      EIS_NAME: ${{ secrets.EIS_NAME }}
 
     steps:
       # 1. 取用程式碼
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2. Debug 步驟，檢查環境變數是否真的被注入 (日誌應顯示 ***)
-      - name: Debug Secrets
-        run: |
-          echo "=== Debug secrets ==="
-          echo "DB_SERVER = $DB_SERVER"
-          echo "DB_USER   = $DB_USER"
-          echo "DB_PASSWORD = $DB_PASSWORD"
-          echo "DB_NAME     = $DB_NAME"
-        # 注意：由於 secrets 被 mask，真實值在日誌中會以 *** 顯示
 
-      # 3. 同步最新 Code 到指定路徑
+      # 2. 同步 Code 至伺服器
       - name: Sync Latest Code to Remote Directory
         run: |
           mkdir -p ~/aviation_predictionweb
-          rsync -av --delete --exclude '*.csv' --exclude '.env' --exclude '*.sh' --exclude 'xgb_models' "$GITHUB_WORKSPACE"/ ~/aviation_predictionweb/
+          rsync -av --delete --exclude '*.csv' --exclude '.env' --exclude '.ven' --exclude '*.sh' --exclude 'xgb_models' "$GITHUB_WORKSPACE"/ ~/aviation_predictionweb/
 
-      # 4. 建立 Docker 映像檔
-      - name: Build Docker Image
+      #### A. Flask
+      - name: Build Flask Image
         run: |
           cd ~/aviation_predictionweb
           docker build -t python312:v1.0.01 .
 
-      # 4.1 清除懸空映像檔
-      - name: Clean up Dangling Images
-        run: docker image prune -f
+      # # 4.1 清除懸空映像檔
+      # - name: Clean up Dangling Images
+      #   run: docker image prune -f
 
-      # 5. 停止 & 移除先前容器
+      # 停止 & 移除先前容器
       - name: Stop & Remove Old Container
         run: |
           docker stop python312_container || true
           docker rm   python312_container || true
 
-      # 6. 執行新容器，用 job-level env 裏的變數(已由 secrets 注入)
-      - name: Run Container
+      # 執行新容器，用 job-level env 裏的變數(已由 secrets 注入)
+      - name: Run Flask Container
         run: |
           docker run -d -p 5001:5000 --name python312_container \
             -e DB_SERVER=$DB_SERVER \
             -e DB_USER=$DB_USER \
             -e DB_PASSWORD=$DB_PASSWORD \
             -e DB_NAME=$DB_NAME \
+            -e EIS_NAME=$EIS_NAME \
+            -e EIS_SERVER=$EIS_SERVER \
             -v /home/dockeruser/aviation_predictionweb/xgb_models:/shared_volume \
             python312:v1.0.01
+
+      #### B. Cron Job
+      - name: Build Cron Image
+        run: |
+          cd ~/aviation_predictionweb
+          docker build -f Dockerfile.push -t oil-cron:v1.0.01 .
+      
+      - name: Stop & Remove Old Cron Container
+        run: |
+          docker stop oil-cron-container || true
+          docker rm oil-cron-container || true
+      
+      - name: Run Cron Container
+        run: |
+          docker run -d --name oil-cron-container \
+            -e DB_SERVER=$DB_SERVER -e DB_USER=$DB_USER \
+            -e DB_PASSWORD=$DB_PASSWORD -e DB_NAME=$DB_NAME \
+            -e EIS_SERVER=$EIS_SERVER -e EIS_NAME=$EIS_NAME \
+            oil-cron:v1.0.01
+
+      #### C. 清理懸空映像(共用)
+      - name: Clean dangling images
+        run: docker image prune -f
+      

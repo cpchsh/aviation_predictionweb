@@ -1,0 +1,70 @@
+#############################
+#  dailypushoil – cron job  #
+#############################
+
+FROM python:3.12-slim
+
+# -------- OS / ODBC / envsubst ---------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        cron gettext-base \
+        curl gnupg2 unixodbc unixodbc-dev build-essential \
+    && curl https://packages.microsoft.com/keys/microsoft.asc \
+       | gpg --dearmor -o /etc/apt/trusted.gpg.d/microsoft.asc.gpg \
+    && curl https://packages.microsoft.com/config/debian/12/prod.list \
+       -o /etc/apt/sources.list.d/mssql-release.list \
+    && sed -i 's/signed-by=.*microsoft-prod.gpg//g' \
+       /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update && ACCEPT_EULA=Y apt-get install -y msodbcsql18 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# -------- Python 套件 ---------
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# -------- 專案程式 ---------
+COPY . .
+
+# -------- crontab (template) ---------
+COPY docker-crontab.tmpl /etc/cron.d/app-cron.tmpl
+
+# -------- 啟動腳本 ---------
+COPY start-cron.sh /start-cron.sh
+RUN chmod +x /start-cron.sh
+
+CMD ["/start-cron.sh"]
+
+# #############################
+# #  dailypushoil  – cron job #
+# #############################
+
+# FROM python:3.12-slim
+
+# # ---------- OS 及 ODBC 依賴 ----------
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#         cron curl gnupg2 \
+#         build-essential unixodbc unixodbc-dev \
+#     && curl https://packages.microsoft.com/keys/microsoft.asc \
+#          | gpg --dearmor -o /etc/apt/trusted.gpg.d/microsoft.asc.gpg \
+#     && curl https://packages.microsoft.com/config/debian/12/prod.list \
+#          -o /etc/apt/sources.list.d/mssql-release.list \
+#     && sed -i 's/signed-by=.*microsoft-prod.gpg//g' \
+#          /etc/apt/sources.list.d/mssql-release.list \
+#     && apt-get update && ACCEPT_EULA=Y apt-get install -y msodbcsql18 \
+#     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# # ---------- Python 套件 ----------
+# WORKDIR /app
+# COPY requirements.txt .
+# RUN pip install --no-cache-dir -r requirements.txt
+
+# # ---------- 專案程式 ----------
+# COPY . .
+
+# # ---------- crontab ----------
+# COPY docker-crontab /etc/cron.d/app-cron
+# RUN chmod 0644 /etc/cron.d/app-cron \
+#     && crontab /etc/cron.d/app-cron      # 安裝排程
+
+# # ---------- 以 cron 前景模式啟動 ----------
+# CMD ["cron", "-f"]

@@ -1,0 +1,5 @@
+# 強制所有 .sh 檔用 LF
+*.sh text eol=lf
+
+# 如果想整個 repo 都用 LF
+# * text=auto eol=lf
