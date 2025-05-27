@@ -538,3 +538,148 @@
 2025-05-23 16:19:59,457 INFO | Tukey 預測完成: 2025-05-23 -> 618.14
 2025-05-23 16:19:59,519 INFO | Error metrics 寫入 : 2025-01-15 MAE=4.5180 MAPE=0.77 RMSE=5.3107
 2025-05-23 16:19:59,519 INFO | 填補完成：2025-01-15 的 CPC = 615.00
+2025-05-27 14:27:49,103 INFO | POST OK 2025-05-06 -> insert_success - \u2705 插入成功
+2025-05-27 14:27:49,189 INFO | Tukey 預測完成: 2025-05-27 -> 507.97
+2025-05-27 14:27:49,190 INFO | 已寫入 2025-05-06 的六港口報價
+2025-05-27 14:28:05,392 INFO | POST OK 2025-05-06 -> insert_success - \u2705 已更新決策的 CPC 值為 511.0
+2025-05-27 14:28:05,426 INFO | 已更新 2025-05-06 的 y-lag
+2025-05-27 14:28:05,427 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:28:05,501 INFO | Tukey 預測完成: 2025-05-27 -> 507.97
+2025-05-27 14:28:05,556 INFO | Error metrics 寫入 : 2025-05-06 MAE=6.2335 MAPE=1.02 RMSE=7.8233
+2025-05-27 14:28:05,556 INFO | 填補完成：2025-05-06 的 CPC = 511.00
+2025-05-27 14:28:20,303 INFO | POST OK 2025-05-07 -> insert_success - \u2705 插入成功
+2025-05-27 14:28:20,381 INFO | Tukey 預測完成: 2025-05-27 -> 517.03
+2025-05-27 14:28:20,381 INFO | 已寫入 2025-05-07 的六港口報價
+2025-05-27 14:28:36,142 INFO | POST OK 2025-05-07 -> insert_success - \u2705 已更新決策的 CPC 值為 517.0
+2025-05-27 14:28:36,177 INFO | 已更新 2025-05-07 的 y-lag
+2025-05-27 14:28:36,177 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:28:36,250 INFO | Tukey 預測完成: 2025-05-27 -> 517.03
+2025-05-27 14:28:36,307 INFO | Error metrics 寫入 : 2025-05-07 MAE=6.2149 MAPE=1.02 RMSE=7.8116
+2025-05-27 14:28:36,307 INFO | 填補完成：2025-05-07 的 CPC = 517.00
+2025-05-27 14:28:52,896 INFO | POST OK 2025-05-08 -> insert_success - \u2705 插入成功
+2025-05-27 14:28:52,972 INFO | Tukey 預測完成: 2025-05-27 -> 523.02
+2025-05-27 14:28:52,973 INFO | 已寫入 2025-05-08 的六港口報價
+2025-05-27 14:29:06,495 INFO | POST OK 2025-05-08 -> insert_success - \u2705 已更新決策的 CPC 值為 517.0
+2025-05-27 14:29:06,540 INFO | 已更新 2025-05-08 的 y-lag
+2025-05-27 14:29:06,540 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:29:06,616 INFO | Tukey 預測完成: 2025-05-27 -> 523.02
+2025-05-27 14:29:06,672 INFO | Error metrics 寫入 : 2025-05-08 MAE=6.2143 MAPE=1.02 RMSE=7.8068
+2025-05-27 14:29:06,673 INFO | 填補完成：2025-05-08 的 CPC = 517.00
+2025-05-27 14:29:15,113 INFO | POST OK 2025-05-09 -> insert_success - \u2705 插入成功
+2025-05-27 14:29:15,188 INFO | Tukey 預測完成: 2025-05-27 -> 524.61
+2025-05-27 14:29:15,189 INFO | 已寫入 2025-05-09 的六港口報價
+2025-05-27 14:29:25,300 INFO | POST OK 2025-05-09 -> insert_success - \u2705 已更新決策的 CPC 值為 522.0
+2025-05-27 14:29:25,358 INFO | 已更新 2025-05-09 的 y-lag
+2025-05-27 14:29:25,358 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:29:25,432 INFO | Tukey 預測完成: 2025-05-27 -> 524.61
+2025-05-27 14:29:25,510 INFO | Error metrics 寫入 : 2025-05-09 MAE=6.2035 MAPE=1.02 RMSE=7.7965
+2025-05-27 14:29:25,511 INFO | 填補完成：2025-05-09 的 CPC = 522.00
+2025-05-27 14:29:35,207 INFO | 2025-05-10 無六港口報價，跳過
+2025-05-27 14:29:35,243 INFO | 2025-05-11 無六港口報價，跳過
+2025-05-27 14:29:35,333 INFO | POST OK 2025-05-12 -> insert_success - \u2705 插入成功
+2025-05-27 14:29:35,333 INFO | 已寫入 2025-05-12 的六港口報價
+2025-05-27 14:29:49,411 INFO | POST OK 2025-05-12 -> insert_success - \u2705 已更新決策的 CPC 值為 524.0
+2025-05-27 14:29:49,445 INFO | 已更新 2025-05-12 的 y-lag
+2025-05-27 14:29:49,446 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:29:49,572 INFO | Error metrics 寫入 : 2025-05-12 MAE=6.2035 MAPE=1.02 RMSE=7.7965
+2025-05-27 14:29:49,572 INFO | 填補完成：2025-05-12 的 CPC = 524.00
+2025-05-27 14:30:19,742 INFO | POST OK 2025-05-12 -> update_check - \u26a0\ufe0f 2025-05-12 已有資料，是否更新？(僅更新有輸入的欄位)<br><br><table class='table' style='color: black; font-size: 11pt; '><tr><td class='table-secondary' style='width: 100px; text-align: left; '>日期</td><td>2025-05-12</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>日本</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>南韓</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>香港</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>新加坡</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>上海</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>舟山</td><td>None</td></tr></table>
+2025-05-27 14:30:31,495 INFO | POST OK 2025-05-12 -> update_check - \u26a0\ufe0f 2025-05-12 已有資料，是否更新？(僅更新有輸入的欄位)<br><br><table class='table' style='color: black; font-size: 11pt; '><tr><td class='table-secondary' style='width: 100px; text-align: left; '>日期</td><td>2025-05-12</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>日本</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>南韓</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>香港</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>新加坡</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>上海</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>舟山</td><td>None</td></tr></table>
+2025-05-27 14:30:50,275 INFO | POST OK 2025-05-12 -> update_check - \u26a0\ufe0f 2025-05-12 已有資料，是否更新？(僅更新有輸入的欄位)<br><br><table class='table' style='color: black; font-size: 11pt; '><tr><td class='table-secondary' style='width: 100px; text-align: left; '>日期</td><td>2025-05-12</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>日本</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>南韓</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>香港</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>新加坡</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>上海</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>舟山</td><td>None</td></tr></table>
+2025-05-27 14:31:01,259 INFO | POST OK 2025-05-12 -> update_check - \u26a0\ufe0f 2025-05-12 已有資料，是否更新？(僅更新有輸入的欄位)<br><br><table class='table' style='color: black; font-size: 11pt; '><tr><td class='table-secondary' style='width: 100px; text-align: left; '>日期</td><td>2025-05-12</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>日本</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>南韓</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>香港</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>新加坡</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>上海</td><td>None</td></tr><tr><td class='table-secondary' style='width: 100px; text-align: left; '>舟山</td><td>None</td></tr></table>
+2025-05-27 14:35:01,134 INFO | POST OK 2025-05-13 -> insert_success - \u2705 插入成功
+2025-05-27 14:35:01,216 INFO | Tukey 預測完成: 2025-05-27 -> 532.73
+2025-05-27 14:35:01,216 INFO | 已寫入 2025-05-13 的六港口報價
+2025-05-27 14:44:18,644 INFO | POST OK 2025-05-13 -> insert_success - \u2705 已更新決策的 CPC 值為 534.0
+2025-05-27 14:44:18,679 INFO | 已更新 2025-05-13 的 y-lag
+2025-05-27 14:44:18,679 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:44:18,779 INFO | Tukey 預測完成: 2025-05-27 -> 532.73
+2025-05-27 14:44:18,839 INFO | Error metrics 寫入 : 2025-05-13 MAE=6.1791 MAPE=1.02 RMSE=7.7752
+2025-05-27 14:44:18,839 INFO | 填補完成：2025-05-13 的 CPC = 534.00
+2025-05-27 14:44:52,823 INFO | POST OK 2025-05-14 -> insert_success - \u2705 插入成功
+2025-05-27 14:44:52,913 INFO | Tukey 預測完成: 2025-05-27 -> 544.38
+2025-05-27 14:44:52,913 INFO | 已寫入 2025-05-14 的六港口報價
+2025-05-27 14:44:59,091 INFO | POST OK 2025-05-14 -> insert_success - \u2705 已更新決策的 CPC 值為 544.0
+2025-05-27 14:44:59,122 INFO | 已更新 2025-05-14 的 y-lag
+2025-05-27 14:44:59,122 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:44:59,198 INFO | Tukey 預測完成: 2025-05-27 -> 544.38
+2025-05-27 14:44:59,253 INFO | Error metrics 寫入 : 2025-05-14 MAE=6.1620 MAPE=1.01 RMSE=7.7638
+2025-05-27 14:44:59,253 INFO | 填補完成：2025-05-14 的 CPC = 544.00
+2025-05-27 14:45:04,939 INFO | POST OK 2025-05-15 -> insert_success - \u2705 插入成功
+2025-05-27 14:45:05,030 INFO | Tukey 預測完成: 2025-05-27 -> 548.03
+2025-05-27 14:45:05,030 INFO | 已寫入 2025-05-15 的六港口報價
+2025-05-27 14:45:16,038 INFO | POST OK 2025-05-15 -> insert_success - \u2705 已更新決策的 CPC 值為 534.0
+2025-05-27 14:45:16,068 INFO | 已更新 2025-05-15 的 y-lag
+2025-05-27 14:45:16,069 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:45:16,142 INFO | Tukey 預測完成: 2025-05-27 -> 548.03
+2025-05-27 14:45:16,211 INFO | Error metrics 寫入 : 2025-05-15 MAE=6.1852 MAPE=1.02 RMSE=7.7897
+2025-05-27 14:45:16,212 INFO | 填補完成：2025-05-15 的 CPC = 534.00
+2025-05-27 14:45:26,634 INFO | POST OK 2025-05-16 -> insert_success - \u2705 插入成功
+2025-05-27 14:45:26,731 INFO | Tukey 預測完成: 2025-05-27 -> 540.36
+2025-05-27 14:45:26,732 INFO | 已寫入 2025-05-16 的六港口報價
+2025-05-27 14:46:12,811 INFO | POST OK 2025-05-16 -> insert_success - \u2705 已更新決策的 CPC 值為 532.0
+2025-05-27 14:46:12,863 INFO | 已更新 2025-05-16 的 y-lag
+2025-05-27 14:46:12,863 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:46:12,939 INFO | Tukey 預測完成: 2025-05-27 -> 540.36
+2025-05-27 14:46:13,028 INFO | Error metrics 寫入 : 2025-05-16 MAE=6.1916 MAPE=1.02 RMSE=7.7914
+2025-05-27 14:46:13,028 INFO | 填補完成：2025-05-16 的 CPC = 532.00
+2025-05-27 14:46:46,302 INFO | 2025-05-17 無六港口報價，跳過
+2025-05-27 14:46:46,339 INFO | 2025-05-18 無六港口報價，跳過
+2025-05-27 14:46:46,437 INFO | POST OK 2025-05-19 -> insert_success - \u2705 插入成功
+2025-05-27 14:46:46,515 INFO | Tukey 預測完成: 2025-05-27 -> 537.26
+2025-05-27 14:46:46,515 INFO | 已寫入 2025-05-19 的六港口報價
+2025-05-27 14:46:50,601 INFO | POST OK 2025-05-19 -> insert_success - \u2705 已更新決策的 CPC 值為 532.0
+2025-05-27 14:46:50,633 INFO | 已更新 2025-05-19 的 y-lag
+2025-05-27 14:46:50,633 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:46:50,706 INFO | Tukey 預測完成: 2025-05-27 -> 537.26
+2025-05-27 14:46:50,778 INFO | Error metrics 寫入 : 2025-05-19 MAE=6.1889 MAPE=1.02 RMSE=7.7852
+2025-05-27 14:46:50,778 INFO | 填補完成：2025-05-19 的 CPC = 532.00
+2025-05-27 14:46:54,204 INFO | POST OK 2025-05-20 -> insert_success - \u2705 插入成功
+2025-05-27 14:46:54,291 INFO | Tukey 預測完成: 2025-05-27 -> 538.08
+2025-05-27 14:46:54,291 INFO | 已寫入 2025-05-20 的六港口報價
+2025-05-27 14:46:57,888 INFO | POST OK 2025-05-20 -> insert_success - \u2705 已更新決策的 CPC 值為 530.0
+2025-05-27 14:46:57,918 INFO | 已更新 2025-05-20 的 y-lag
+2025-05-27 14:46:57,918 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:46:57,991 INFO | Tukey 預測完成: 2025-05-27 -> 538.08
+2025-05-27 14:46:58,061 INFO | Error metrics 寫入 : 2025-05-20 MAE=6.1944 MAPE=1.02 RMSE=7.7861
+2025-05-27 14:46:58,061 INFO | 填補完成：2025-05-20 的 CPC = 530.00
+2025-05-27 14:47:01,425 INFO | POST OK 2025-05-21 -> insert_success - \u2705 插入成功
+2025-05-27 14:47:01,502 INFO | Tukey 預測完成: 2025-05-27 -> 538.34
+2025-05-27 14:47:01,503 INFO | 已寫入 2025-05-21 的六港口報價
+2025-05-27 14:47:04,666 INFO | POST OK 2025-05-21 -> insert_success - \u2705 已更新決策的 CPC 值為 535.0
+2025-05-27 14:47:04,697 INFO | 已更新 2025-05-21 的 y-lag
+2025-05-27 14:47:04,697 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:47:04,774 INFO | Tukey 預測完成: 2025-05-27 -> 538.34
+2025-05-27 14:47:04,839 INFO | Error metrics 寫入 : 2025-05-21 MAE=6.1861 MAPE=1.02 RMSE=7.7768
+2025-05-27 14:47:04,840 INFO | 填補完成：2025-05-21 的 CPC = 535.00
+2025-05-27 14:49:28,920 INFO | POST OK 2025-05-22 -> insert_success - \u2705 插入成功
+2025-05-27 14:49:29,010 INFO | Tukey 預測完成: 2025-05-27 -> 537.42
+2025-05-27 14:49:29,011 INFO | 已寫入 2025-05-22 的六港口報價
+2025-05-27 14:49:35,865 INFO | POST OK 2025-05-22 -> insert_success - \u2705 已更新決策的 CPC 值為 525.0
+2025-05-27 14:49:35,897 INFO | 已更新 2025-05-22 的 y-lag
+2025-05-27 14:49:35,898 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:49:35,974 INFO | Tukey 預測完成: 2025-05-27 -> 537.42
+2025-05-27 14:49:36,064 INFO | Error metrics 寫入 : 2025-05-22 MAE=6.2042 MAPE=1.02 RMSE=7.7943
+2025-05-27 14:49:36,065 INFO | 填補完成：2025-05-22 的 CPC = 525.00
+2025-05-27 14:51:43,607 INFO | POST OK 2025-05-23 -> insert_success - \u2705 插入成功
+2025-05-27 14:51:43,687 INFO | Tukey 預測完成: 2025-05-27 -> 531.03
+2025-05-27 14:51:43,687 INFO | 已寫入 2025-05-23 的六港口報價
+2025-05-27 14:51:47,005 INFO | POST OK 2025-05-23 -> insert_success - \u2705 已更新決策的 CPC 值為 523.0
+2025-05-27 14:51:47,037 INFO | 已更新 2025-05-23 的 y-lag
+2025-05-27 14:51:47,037 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:51:47,111 INFO | Tukey 預測完成: 2025-05-27 -> 531.03
+2025-05-27 14:51:47,168 INFO | Error metrics 寫入 : 2025-05-23 MAE=6.2095 MAPE=1.03 RMSE=7.7950
+2025-05-27 14:51:47,169 INFO | 填補完成：2025-05-23 的 CPC = 523.00
+2025-05-27 14:51:53,053 INFO | 2025-05-24 無六港口報價，跳過
+2025-05-27 14:51:53,090 INFO | 2025-05-25 無六港口報價，跳過
+2025-05-27 14:51:53,178 INFO | POST OK 2025-05-26 -> insert_success - \u2705 插入成功
+2025-05-27 14:51:53,256 INFO | Tukey 預測完成: 2025-05-27 -> 529.54
+2025-05-27 14:51:53,256 INFO | 已寫入 2025-05-26 的六港口報價
+2025-05-27 14:51:56,830 INFO | POST OK 2025-05-26 -> insert_success - \u2705 已更新決策的 CPC 值為 523.0
+2025-05-27 14:51:56,862 INFO | 已更新 2025-05-26 的 y-lag
+2025-05-27 14:51:56,863 INFO | CPC 更新後已同步 y-lag
+2025-05-27 14:51:56,943 INFO | Tukey 預測完成: 2025-05-27 -> 529.54
+2025-05-27 14:51:57,001 INFO | Error metrics 寫入 : 2025-05-26 MAE=6.2104 MAPE=1.03 RMSE=7.7917
+2025-05-27 14:51:57,001 INFO | 填補完成：2025-05-26 的 CPC = 523.00
+2025-05-27 14:52:01,684 INFO | 今日之前沒有新的六港口資料
+2025-05-27 14:52:05,576 INFO | 今日之前沒有新的六港口資料

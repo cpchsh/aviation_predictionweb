@@ -6,5 +6,4 @@ DB_NAME=${DB_NAME}
 EIS_SERVER=${EIS_SERVER}
 EIS_NAME=${EIS_NAME}
 
-# 每天9點到17點每分鐘執行一次
-* 9-17 * * * /usr/local/bin/python /app/dailypushoil.py >> /var/log/dailypushoil.log 2>&1
+* * * * * /usr/local/bin/python /app/dailypushoil.py >> /var/log/dailypushoil.log 2>&1
