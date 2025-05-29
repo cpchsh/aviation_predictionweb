@@ -59,7 +59,7 @@ jobs:
             -e DB_NAME=$DB_NAME \
             -e EIS_NAME=$EIS_NAME \
             -e EIS_SERVER=$EIS_SERVER \
-            -e ALERT_WEBHOOK= \
+            -e ALERT_WEBHOOK=$ALERT_WEBHOOK\
             -v /home/dockeruser/aviation_predictionweb/xgb_models:/shared_volume \
             python312:v1.0.01
 
@@ -80,6 +80,7 @@ jobs:
             -e DB_SERVER=$DB_SERVER -e DB_USER=$DB_USER \
             -e DB_PASSWORD=$DB_PASSWORD -e DB_NAME=$DB_NAME \
             -e EIS_SERVER=$EIS_SERVER -e EIS_NAME=$EIS_NAME \
+            -e ALERT_WEBHOOK=$ALERT_WEBHOOK \
             oil-cron:v1.0.01
 
       #### C. 清理懸空映像(共用)
