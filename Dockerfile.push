@@ -28,6 +28,9 @@ COPY . .
 # -------- crontab (template) ---------
 COPY docker-crontab.tmpl /etc/cron.d/app-cron.tmpl
 
+# 把 CRLF 換成 LF，否則 crontab 會出錯            ### <<< 新增
+RUN sed -i 's/\r$//' /etc/cron.d/app-cron.tmpl
+
 # -------- 啟動腳本 ---------
 COPY start-cron.sh /start-cron.sh
 RUN chmod +x /start-cron.sh

@@ -14,6 +14,7 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_NAME = os.getenv("DB_NAME")
 EIS_SERVER = os.getenv("EIS_SERVER")
 EIS_NAME = os.getenv("EIS_NAME")
+WEBHOOK_URL = os.getenv("ALERT_WEBHOOK")
 
 API_URL = "http://10.168.230.33:5001/update"
 LOG_FILE = "dailypushoil.log"
@@ -21,6 +22,16 @@ LOG_FILE = "dailypushoil.log"
 logging.basicConfig(filename=LOG_FILE,
                     level=logging.INFO,
                     format="%(asctime)s %(levelname)s | %(message)s")
+
+# --- 新加坡假日 -----------------------------------------------------
+holidays_file = os.path.join(
+    os.path.dirname(__file__),       # 目前檔案所在資料夾
+    "data", "holidays.sg.json"       # 相對於專案的路徑
+)
+with open(holidays_file, encoding="utf-8") as fp:
+    SG_HOLIDAYS = {h["date"] for h in json.load(fp)}
+
+# --------------------------------------------------------------------
 
 def nz(v):    #None->""
     return "" if v is None else v
@@ -48,20 +59,6 @@ def get_latest_two_dates():
     second   = rows[1]["日期"] if len(rows) > 1 else None
     return latest, second
 
-        
-
-# 取得昨日報價
-def fetch_yesterday_prices(ydate: date) -> dict | None:
-    dummy = {
-        "日本": 700.0,
-        "南韓": 702.5,
-        "香港": 698.0,
-        "新加坡": 699.0,
-        "上海": 700.0,
-        "舟山": 701.1,
-        "CPC": 720.0
-    }
-    return dummy
 
 def update_ylag_for_latest(the_date: date):
     with pymssql.connect(server=DB_SERVER, user=DB_USER,
@@ -91,16 +88,31 @@ def update_ylag_for_latest(the_date: date):
             logging.info("已更新 %s 的 y-lag", the_date)
             return True
 
+def notify_error(msg: str):
+    """發 Teams webhook 告警"""
+    if not WEBHOOK_URL:     
+        logging.warning("Webhook URL 未設置，略過告警")
+        return
+    try:
+        payload = {"text": msg.replace("\n", "<br>")}
+        r = requests.post(WEBHOOK_URL,
+                          headers={"Content-Type": "application/json"},
+                          data=json.dumps(payload), timeout=5)
+        r.raise_for_status()
+    except Exception as e:
+        logging.error("Webhook 發送失敗: %s", e)
 
+def is_sg_holiday(d: date) -> bool:
+    """d 為 date 物件，若是新加坡假日就回傳 True"""
+    return d.isoformat() in SG_HOLIDAYS       
 
 # post 到 update
 def post_to_update(payload: dict) -> bool:
     """
-    1. 送POST到/update
-    2. 若成功:
-       - 「各港口更新」  -> 呼叫 predcit_next_day_tukey()
-       - 「CPC 更新」   -> 計算 MAE / MAPE / RMSE 並寫入 DB
-    3. 回傳 True/False 表示POST成敗
+    送 POST 到 /update，並在三種情況觸發額外處理:
+      1) 各港口更新成功 -> 呼叫預測
+      2) CPC 更新成功   -> 更新 y-lag / 再預測 / 寫指標
+      3) 後端回傳 update_check 或 error -> 發 Teams 警告
     """
     try:
         r = requests.post(API_URL, data=payload, timeout=15)
@@ -112,6 +124,16 @@ def post_to_update(payload: dict) -> bool:
              payload["date"],
              resp.get("status"),
              resp.get("message"))       
+        
+        # ---- 回傳 update_check / error 立即警告 ------------
+        status = resp.get("status", "")
+        if status in {"update_check", "error"}:
+            msg = (f"⚠️  LS Marine Fuel POST 回傳 {status}\n"
+                   f"‣ 日期：{payload['date']}\n"
+                   f"‣ 回應：{resp.get('message', '')[:300]}") 
+            logging.warning(msg.replace("\n", " | "))
+            notify_error(msg)
+                
 
         # --- 判斷兩種情況 ---
         has_cpc = bool(payload.get("cpc"))
@@ -205,7 +227,6 @@ def get_price_for_date(d: date) -> dict | None:
 
     return blank       
 
-# TODO 
 def main():
     latest_date, _ = get_latest_two_dates()
     if latest_date is None:
@@ -227,6 +248,14 @@ def main():
     # 只要六個港口有任何一個是 None，就視為需要補
     need_ports = any(row_latest[col] is None
                     for col in ("日本","南韓","香港","新加坡","上海","舟山"))
+    
+    if (not need_cpc) and need_ports and (latest_date.isoformat() not in SG_HOLIDAYS):
+        msg = (f"⚠️  LS Marine Fuel dailypushoil\n"
+               f"‣ 日期：{latest_date}\n"
+               f"‣ 異常：CPC 已匯入，但 6 港口仍為 None\n"
+               f"‣ 動作：請人工確認行情或 API")            
+        logging.warning(msg.replace("\n", " | "))
+        notify_error(msg)
 
     # ─── Step 1. 先補 CPC（若最新列缺 CPC） ───
     if need_cpc:
@@ -234,6 +263,9 @@ def main():
         cpc_price = None
         while cpc_day <= today:
             tmp = get_price_for_date(cpc_day)
+            if is_sg_holiday(cpc_day):
+                cpc_day += timedelta(days=1)
+                continue
             if tmp and tmp["CPC"] is not None:
                 cpc_price = tmp["CPC"]
                 break
@@ -257,6 +289,10 @@ def main():
     # ─── Step 2. 若 CPC 已齊，去補下一天的六港口 ───
     ports_day = latest_date if need_ports else latest_date + timedelta(days=1)
     while ports_day < today:
+        if is_sg_holiday(ports_day):
+            ports_day += timedelta(days = 1)
+            continue
+
         ports_price = get_price_for_date(ports_day)
         if ports_price is not None:
             break
