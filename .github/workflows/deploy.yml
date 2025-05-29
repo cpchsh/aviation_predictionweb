@@ -19,6 +19,7 @@ jobs:
       DB_NAME: ${{ secrets.DB_NAME }}
       EIS_SERVER: ${{ secrets.EIS_SERVER }}
       EIS_NAME: ${{ secrets.EIS_NAME }}
+      ALERT_WEBHOOK: ${{ secrets.ALERT_WEBHOOK }}
 
     steps:
       # 1. 取用程式碼
@@ -58,6 +59,7 @@ jobs:
             -e DB_NAME=$DB_NAME \
             -e EIS_NAME=$EIS_NAME \
             -e EIS_SERVER=$EIS_SERVER \
+            -e ALERT_WEBHOOK \
             -v /home/dockeruser/aviation_predictionweb/xgb_models:/shared_volume \
             python312:v1.0.01
 
