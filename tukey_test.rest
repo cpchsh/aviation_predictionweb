@@ -1,0 +1,2 @@
+### 測試 Tukey API ----------------------------------
+GET http://10.16.32.97/tukey/tukey/api/e9cadd0a-dc94-4f47-a161-c7a666195bfe/?format=api

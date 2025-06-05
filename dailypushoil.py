@@ -16,6 +16,7 @@ EIS_SERVER = os.getenv("EIS_SERVER")
 EIS_NAME = os.getenv("EIS_NAME")
 WEBHOOK_URL = os.getenv("ALERT_WEBHOOK")
 
+#API_URL = "http://127.0.0.1:5000/update"
 API_URL = "http://10.168.230.33:5001/update"
 LOG_FILE = "dailypushoil.log"
 
@@ -23,13 +24,14 @@ logging.basicConfig(filename=LOG_FILE,
                     level=logging.INFO,
                     format="%(asctime)s %(levelname)s | %(message)s")
 
-# --- 新加坡假日 -----------------------------------------------------
-holidays_file = os.path.join(
-    os.path.dirname(__file__),       # 目前檔案所在資料夾
-    "data", "holidays.sg.json"       # 相對於專案的路徑
-)
-with open(holidays_file, encoding="utf-8") as fp:
+# --- 載入假日 -----------------------------------------------------
+holidays_dir = os.path.join(os.path.dirname(__file__), "data")
+
+with open(os.path.join(holidays_dir, "holidays.sg.json"),  encoding="utf-8") as fp:
     SG_HOLIDAYS = {h["date"] for h in json.load(fp)}
+
+with open(os.path.join(holidays_dir, "holidays.tw.json"),  encoding="utf-8") as fp:
+    TW_HOLIDAYS = {h["date"] for h in json.load(fp)}
 
 # --------------------------------------------------------------------
 
@@ -106,6 +108,10 @@ def is_sg_holiday(d: date) -> bool:
     """d 為 date 物件，若是新加坡假日就回傳 True"""
     return d.isoformat() in SG_HOLIDAYS       
 
+def is_tw_holiday(d: date) -> bool:
+    """若為台灣國定假日回傳 True"""
+    return d.isoformat() in TW_HOLIDAYS
+
 # post 到 update
 def post_to_update(payload: dict) -> bool:
     """
@@ -130,7 +136,7 @@ def post_to_update(payload: dict) -> bool:
         if status in {"update_check", "error"}:
             msg = (f"⚠️  LS Marine Fuel POST 回傳 {status}\n"
                    f"‣ 日期：{payload['date']}\n"
-                   f"‣ 回應：{resp.get('message', '')[:300]}") 
+                   f"‣ 回應：{resp.get('message', '')}") 
             logging.warning(msg.replace("\n", " | "))
             notify_error(msg)
                 
@@ -241,6 +247,11 @@ def main():
         with conn.cursor(as_dict=True) as cur:
             cur.execute("SELECT * FROM LSMF_Prediction WHERE 日期=%s", (latest_date,))
             row_latest = cur.fetchone()
+            ## 取得前一資料日
+            cur.execute("""SELECT TOP 1 * FROM LSMF_Prediction
+                       WHERE 日期 < %s ORDER BY 日期 DESC""", (latest_date,))
+            row_prev = cur.fetchone()
+
     if row_latest is None:
         logging.error("找不到最新列？")
         return
@@ -259,13 +270,25 @@ def main():
 
     # ─── Step 1. 先補 CPC（若最新列缺 CPC） ───
     if need_cpc:
+        ### 若 TW 假日 & 非SG假日 -> 直接複製前一日CPC
+        if is_tw_holiday(latest_date) and not is_sg_holiday(latest_date) and row_latest:
+            payload = {
+                "date": latest_date.strftime("%Y-%m-%d"),
+                "japan":"","korea":"","hongkong":"","singapore":"",
+                "shanghai":"","zhoushan":"",
+                "cpc":nz(row_prev["CPC"])
+            }
+            if post_to_update(payload):
+                logging.info("TW 假日，複製前一日 CPC 完成")
+            return                         # 本輪結束
+
         cpc_day = latest_date + timedelta(days=1)
         cpc_price = None
         while cpc_day <= today:
-            tmp = get_price_for_date(cpc_day)
             if is_sg_holiday(cpc_day):
                 cpc_day += timedelta(days=1)
                 continue
+            tmp = get_price_for_date(cpc_day)
             if tmp and tmp["CPC"] is not None:
                 cpc_price = tmp["CPC"]
                 break
@@ -289,8 +312,31 @@ def main():
     # ─── Step 2. 若 CPC 已齊，去補下一天的六港口 ───
     ports_day = latest_date if need_ports else latest_date + timedelta(days=1)
     while ports_day < today:
-        if is_sg_holiday(ports_day):
+
+        ### 若 SG 假日 % 非 TW 假日，直接複製前一日六港口
+        if is_sg_holiday(ports_day) and not is_tw_holiday(ports_day):
+            if row_latest:
+                payload = {
+                    "date": ports_day.strftime("%Y-%m-%d"),
+                    "japan": nz(row_latest["日本"]),
+                    "korea": nz(row_latest["南韓"]),
+                    "hongkong": nz(row_latest["香港"]),
+                    "singapore": nz(row_latest["新加坡"]),
+                    "shanghai": nz(row_latest["上海"]),
+                    "zhoushan": nz(row_latest["舟山"]),
+                    "cpc": ""
+                }
+                if post_to_update(payload):
+                    logging.info("SG 假日，複製前一日六港口完成")
+                return
+            # 若意外沒有 row_prev 資料 -> 視同無報價，往後找
             ports_day += timedelta(days = 1)
+            continue
+
+        # 兩國同休:直接跳過
+        if is_sg_holiday(ports_day) and is_tw_holiday(ports_day):
+            logging.info("%s 兩國同休，跳過",ports_day)
+            ports_day += timedelta(days=1)
             continue
 
         ports_price = get_price_for_date(ports_day)

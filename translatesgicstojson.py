@@ -3,6 +3,7 @@ import json
 import re
 from datetime import datetime
 # 新加坡假日網址
+# 台灣假日網址 : https://n.sfs.tw/content/index/16460
 ics_path = Path("public-holidays-sg-2023.ics")   # 存放 ICS 的檔名
 out_path = Path("holidays.sg2023.json")  # 輸出 JSON
 

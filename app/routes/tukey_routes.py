@@ -15,6 +15,8 @@ server = os.getenv("DB_SERVER")
 user = os.getenv("DB_USER")
 password = os.getenv("DB_PASSWORD")
 database = os.getenv("DB_NAME")
+api_token = os.getenv("TUKEY_API") # 0502_2025 bys->訓練到20250402
+
 
 def getInput():
     record = {
@@ -407,7 +409,6 @@ def predict_next_day_tukey():
         # 3.發送 API 請求並獲取預測結果
         # api_token = "37d9fd65-77d5-464f-8038-3cfee4d525de" #無ylag
         # "3babb936-d258-44bc-981e-e4c358055ad7" 有ylag old knn
-        api_token = "fac8c081-b08b-4640-931a-cab285289414" # 0321 svm
 
         get_api_path = send_api_request(predict_info,api_token)
         predicted_value = poll_prediction_result(get_api_path)
@@ -455,7 +456,6 @@ def tukey_predict_custom():
     print("📜 predict_info",predict_info)
 
     # 發送 API 請求並獲取預測結果
-    api_token = "fac8c081-b08b-4640-931a-cab285289414"
     predict_info.pop("日期", None)  # 移除 "日期"
     predict_info = [predict_info]
 
