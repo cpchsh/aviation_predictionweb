@@ -1,2 +1,19 @@
-### 測試 Tukey API ----------------------------------
-GET http://10.16.32.97/tukey/tukey/api/e9cadd0a-dc94-4f47-a161-c7a666195bfe/?format=api
+POST http://10.16.32.97/tukey/tukey/api/
+Content-Type: application/json
+
+{
+  "api_token": "38458e8e-bc38-47e0-9dcc-3c57c29214f9",
+  "data": [
+    {
+      "日本": 515.0,
+      "南韓": 510.0,
+      "香港": 513.0,
+      "新加坡": 487.0,
+      "上海": 489.0,
+      "舟山": 488.0,
+      "y_lag_1": 506.0,
+      "y_lag_2": 516.0,
+      "y_lag_3": 526.0
+    }
+  ]
+}

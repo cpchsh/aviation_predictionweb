@@ -5,17 +5,28 @@ import time
 import requests
 import pymssql
 from datetime import date,datetime, timedelta
-from dotenv import load_dotenv
+from dotenv import load_dotenv,find_dotenv
 
 tukey_bp = Blueprint('tukey_bp', __name__)
 
 # 讀取 .env 文件
+# 1️⃣ 明確指定 .env 路徑，並允許覆寫
+env_file = find_dotenv(  # 自動往父層尋找
+    filename=".env",
+    raise_error_if_not_found=True
+)
+load_dotenv(dotenv_path=env_file, override=True)
+
+# 2️⃣ 讀取並 strip 空白／換行
+api_token = os.getenv("TUKEY_API", "").strip()
+if not api_token:
+    raise RuntimeError("❌ 找不到 TUKEY_API，請檢查 .env 或環境變數")
 load_dotenv()
 server = os.getenv("DB_SERVER")
 user = os.getenv("DB_USER")
 password = os.getenv("DB_PASSWORD")
 database = os.getenv("DB_NAME")
-api_token = os.getenv("TUKEY_API") # 0502_2025 bys->訓練到20250402
+#api_token = os.getenv("TUKEY_API") # 0502_2025 bys->訓練到20250402
 
 
 def getInput():
@@ -181,7 +192,7 @@ def update_predictCPC(cursor, conn, predictCPC, latest):
 def send_api_request(predict_info,api_token):
     """ 發送預測請求並獲取結果 """
     
-    post_api_path = "http://10.16.32.97:8098/tukey/tukey/api/"
+    post_api_path = "http://10.16.32.97/tukey/tukey/api/"
     request_json = {"api_token": api_token, "data": predict_info}
 
     print("開始發送 POST 請求...")
