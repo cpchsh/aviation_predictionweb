@@ -16,8 +16,8 @@ EIS_SERVER = os.getenv("EIS_SERVER")
 EIS_NAME = os.getenv("EIS_NAME")
 WEBHOOK_URL = os.getenv("ALERT_WEBHOOK")
 
-API_URL = "http://127.0.0.1:5000/update"
-#API_URL = "http://10.168.230.33:5001/update"
+#API_URL = "http://127.0.0.1:5000/update"
+API_URL = "http://10.168.230.33:5001/update"
 LOG_FILE = "dailypushoil.log"
 
 logging.basicConfig(filename=LOG_FILE,
