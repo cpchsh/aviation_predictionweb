@@ -120,20 +120,27 @@ def post_to_update(payload: dict) -> bool:
       2) CPC 更新成功   -> 更新 y-lag / 再預測 / 寫指標
       3) 後端回傳 update_check 或 error -> 發 Teams 警告
     """
+    is_force = str(payload.get("force", "0")) == "1"   # 判斷是否強制覆寫
     try:
         r = requests.post(API_URL, data=payload, timeout=15)
         r.raise_for_status()
         resp = r.json()
 
+        status = resp.get("status", "")
         ok = resp.get("status") in ("insert_success", "update_success")
+
+        # 若強制模式，但回傳 update check -> 視為成功
+        if is_force and status == "update_check":
+            ok = True
+            logging.info("FORCE 模式接獲 update_check，視為成功覆寫。")
+
         logging.info("POST OK %s -> %s - %s",
              payload["date"],
              resp.get("status"),
              resp.get("message"))       
         
-        # ---- 回傳 update_check / error 立即警告 ------------
-        status = resp.get("status", "")
-        if status in {"update_check", "error"}:
+        # ---- 只有在「非force」且回傳 problem 才警告 ------------
+        if not is_force and status in {"update_check", "error"}:
             msg = (f"⚠️  LS Marine Fuel POST 回傳 {status}\n"
                    f"‣ 日期：{payload['date']}\n"
                    f"‣ 回應：{resp.get('message', '')}") 
@@ -357,7 +364,8 @@ def main():
         "singapore": nz(ports_price["新加坡"]),
         "shanghai": nz(ports_price["上海"]),
         "zhoushan": nz(ports_price["舟山"]),
-        "cpc": ""
+        "cpc": "",
+        "force": 1
     }
 
     # next_day_tukey = predict_next_day_tukey()

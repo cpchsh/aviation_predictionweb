@@ -267,7 +267,8 @@ def update():
     today = date.today().strftime("%Y-%m-%d")
 
     input=getInput()
-    confirmUpdate = request.form.get("confirmUpdate") == "true"
+    force_update = request.form.get("force") == "1"
+    confirmUpdate = (request.form.get("confirmUpdate") == "true") or force_update
 
     try:
         if "CPC" in input and input["CPC"]:
