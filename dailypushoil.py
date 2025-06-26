@@ -240,6 +240,46 @@ def get_price_for_date(d: date) -> dict | None:
 
     return blank       
 
+def always_check_cpc(latest_date: date, row_latest: dict):
+    """
+    不分情況，每輪都去抓 latest_date+1 的真正 CPC。
+    只要跟資料庫裡的值「不同」就用 force=1 覆寫。
+    """
+    today = date.today()
+    cpc_day   = latest_date + timedelta(days=1)
+    cpc_price = None
+    while cpc_day <= today:
+        if is_sg_holiday(cpc_day):               # 新加坡休市→換下一天
+            cpc_day += timedelta(days=1)
+            continue
+        tmp = get_price_for_date(cpc_day)
+        if tmp and tmp["CPC"] is not None:
+            cpc_price = tmp["CPC"]
+            break
+        cpc_day += timedelta(days=1)
+
+    if cpc_price is None:                        # 還是抓不到 → 給 Step1 去處理
+        return None
+
+    old = row_latest["CPC"]
+    if old is not None and abs(old - cpc_price) < 1e-6:
+        logging.info("CPC 已是最新值 %.2f，略過覆寫", cpc_price)
+        return None
+
+    # --- 組 payload：同列錯位寫在 latest_date，force=1 ---
+    payload = {
+        "date": latest_date.strftime("%Y-%m-%d"),
+        "japan": "", "korea": "", "hongkong": "", "singapore": "",
+        "shanghai": "", "zhoushan": "",
+        "cpc": cpc_price,
+        "force": 1
+    }
+    if post_to_update(payload):
+        action = "覆寫" if old is not None else "填補"
+        logging.info("%s %s 的 CPC = %.2f", action, latest_date, cpc_price)
+        return cpc_price
+    return None
+
 def main():
     latest_date, _ = get_latest_two_dates()
     if latest_date is None:
@@ -262,6 +302,13 @@ def main():
     if row_latest is None:
         logging.error("找不到最新列？")
         return
+    new_cpc = always_check_cpc(latest_date, row_latest)   # 永遠先檢查/覆寫 CPC
+
+
+    # 如果真的覆寫成功，同步更新記憶中的 raw_latest
+    if new_cpc is not None:
+        row_latest["CPC"] = new_cpc
+
     need_cpc   = row_latest["CPC"] is None
     # 只要六個港口有任何一個是 None，就視為需要補
     need_ports = any(row_latest[col] is None
