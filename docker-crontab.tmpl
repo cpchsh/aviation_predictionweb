@@ -8,6 +8,6 @@ EIS_NAME=${EIS_NAME}
 ALERT_WEBHOOK=${ALERT_WEBHOOK}
 TUKEY_API=${TUKEY_API}
 
-# 週一至週五9點到13點每15分鐘執行一次
-*/15 1-5 * * 1-5 /usr/local/bin/python /app/dailypushoil.py >> /var/log/dailypushoil.log 2>&1
+# 週一至週五9點到12點每15分鐘執行一次
+*/15 1-4 * * 1-5 /usr/local/bin/python /app/dailypushoil.py >> /var/log/dailypushoil.log 2>&1
 # * * * * * /usr/local/bin/python /app/dailypushoil.py >> /var/log/dailypushoil.log 2>&1
